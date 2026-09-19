@@ -35,7 +35,8 @@ def check(name, cond, detail=""):
 
 def write(p, text):
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(text, encoding="utf-8", newline="\n")
+    with open(p, "w", encoding="utf-8", newline="\n") as fh:  # Path.write_text(newline=) needs Python 3.10
+        fh.write(text)
 
 
 def main():

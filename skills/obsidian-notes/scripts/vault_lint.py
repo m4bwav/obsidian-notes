@@ -161,10 +161,13 @@ def link_target(m):
     return m.group(2) if m.group(2) is not None else m.group(3)
 
 
-def case_matches(base, typed):
-    """True when every component of the typed relative path matches the on-disk case
-    (Windows and macOS resolve case-insensitively; GitHub and Linux do not)."""
+def resolve_typed(base, typed):
+    """Resolve a typed relative path against the disk one component at a time.
+    Returns (exact_case, path): path is None when nothing matches even case-insensitively;
+    exact_case is False when it only matches with a different case (Windows and macOS resolve
+    that, GitHub and Linux do not). A last component without .md may match name.md."""
     cur = Path(base)
+    exact = True
     parts = [x for x in typed.replace("\\", "/").split("/") if x not in ("", ".")]
     for i, part in enumerate(parts):
         if part == "..":
@@ -173,14 +176,21 @@ def case_matches(base, typed):
         try:
             names = {e.name for e in os.scandir(cur)}
         except OSError:
-            return True
+            return exact, None
+        last = i == len(parts) - 1
         if part in names:
             cur = cur / part
             continue
-        if i == len(parts) - 1 and part + ".md" in names:
-            return True
-        return False
-    return True
+        if last and part + ".md" in names:
+            cur = cur / (part + ".md")
+            continue
+        lower = {n.lower(): n for n in names}
+        hit = lower.get(part.lower()) or (lower.get(part.lower() + ".md") if last else None)
+        if hit is None:
+            return exact, None
+        exact = False
+        cur = cur / hit
+    return exact, cur
 
 
 def index_in(folder):
@@ -292,18 +302,16 @@ def scan(root, excludes):
         t = unquote(target.split("#", 1)[0].split("?", 1)[0])
         if not t:
             return
-        cand = p.parent / t
+        exact, cand = resolve_typed(p.parent, t)
+        if cand is None:
+            f["broken_md_links"].append({"file": rel(p, root), "target": raw})
+            return
+        if not exact:
+            f["broken_md_links"].append({"file": rel(p, root), "target": raw + " (case differs from the file on disk)"})
+            return
         if cand.is_dir():
             idx = index_in(cand)
             cand = idx if idx else cand
-        if not cand.exists() and not cand.suffix:
-            cand = cand.with_suffix(".md")
-        if not cand.exists():
-            f["broken_md_links"].append({"file": rel(p, root), "target": raw})
-            return
-        if not case_matches(p.parent, t):
-            f["broken_md_links"].append({"file": rel(p, root), "target": raw + " (case differs from the file on disk)"})
-            return
         if not under(cand, root):
             f["links_outside_root"].append({"file": rel(p, root), "target": raw})
             return
