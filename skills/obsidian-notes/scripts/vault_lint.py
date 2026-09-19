@@ -553,8 +553,7 @@ def probe():
     if run_as:
         try:
             ver = subprocess.run([run_as, "version"], capture_output=True, text=True, timeout=20).stdout.strip()
-            vaults = [v for v in subprocess.run([run_as, "vaults"], capture_output=True, text=True, timeout=20).stdout.split("
-") if v.strip()]
+            vaults = [v for v in subprocess.run([run_as, "vaults"], capture_output=True, text=True, timeout=20).stdout.splitlines() if v.strip()]
         except Exception as e:  # noqa: BLE001
             ver = f"error: {e}"
     print(json.dumps({"cli_on_path": exe, "cli_shim": shim, "cli_version": ver, "vaults": vaults, "app_found": installed,
