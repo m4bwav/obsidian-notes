@@ -7,7 +7,7 @@ Python 3.9 or newer, Windows, macOS and Linux.
   python vault_lint.py <root> --fix-index          # write INDEX.md in folders that have none, link it from the nearest index above
   python vault_lint.py <root> --to-markdown-links  # rewrite [[wikilinks]] that resolve to one file as relative markdown links
   python vault_lint.py <root> --vault-init [--ignore FOLDER ...]   # .obsidian/app.json (markdown links, relative paths) + .gitignore lines
-  python vault_lint.py --probe                     # is the `obsidian` CLI on PATH, is the app installed
+  python vault_lint.py --probe                     # is the `obsidian` CLI on PATH (or its Windows shim beside the app), which vaults exist
 
 Errors (exit code 1): broken markdown links (missing target, a space in the target,
 or a target whose case differs from the file on disk, which is a 404 on GitHub and
@@ -542,14 +542,23 @@ def probe():
     if os.name == "nt":
         cands += [Path(f"{d}:/Program Files/Obsidian/Obsidian.exe") for d in "DEFG" if Path(f"{d}:/").exists()]
     installed = next((str(c) for c in cands if c.exists()), None)
-    ver = None
-    if exe:
+    # On Windows the toggle drops Obsidian.com beside Obsidian.exe and adds that folder to the user PATH;
+    # a shell opened before the toggle does not see it, so report the shim's full path as well.
+    shim = None
+    if installed and os.name == "nt":
+        cand = Path(installed).parent / "Obsidian.com"
+        shim = str(cand) if cand.exists() else None
+    run_as = exe or shim
+    ver, vaults = None, None
+    if run_as:
         try:
-            ver = subprocess.run([exe, "version"], capture_output=True, text=True, timeout=20).stdout.strip()
+            ver = subprocess.run([run_as, "version"], capture_output=True, text=True, timeout=20).stdout.strip()
+            vaults = [v for v in subprocess.run([run_as, "vaults"], capture_output=True, text=True, timeout=20).stdout.split("
+") if v.strip()]
         except Exception as e:  # noqa: BLE001
             ver = f"error: {e}"
-    print(json.dumps({"cli_on_path": exe, "cli_version": ver, "app_found": installed,
-                      "enable": "Obsidian > Settings > General > Command line interface (needs the 1.12.7+ installer; restart the terminal afterwards)"}, indent=2))
+    print(json.dumps({"cli_on_path": exe, "cli_shim": shim, "cli_version": ver, "vaults": vaults, "app_found": installed,
+                      "enable": "Obsidian > Settings > General > Command line interface (needs the 1.12.7+ installer; restart the terminal afterwards, or call cli_shim by full path)"}, indent=2))
 
 
 # ---------- main ----------
