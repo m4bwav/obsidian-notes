@@ -35,8 +35,8 @@ Run `VL <root>` again; exit code 0 means no error-class findings (a root that do
 
 ## Step 3: write markdown that links (when creating or editing notes)
 
-- One index per folder a reader might enter (`README.md` on GitHub-facing repos, `INDEX.md` in doc sets); it links every document in the folder by title and every subfolder by its index. The root index is the entry point, so every document is reachable in two hops.
-- Every document links its index (a `Back to [index](README.md)` line, or the index name in the first lines) and ends with a `Related:` line linking the documents it builds on, contradicts or supersedes. Those are the edges Obsidian turns into backlinks and the graph.
+- One index per folder a reader might enter (`README.md` on GitHub-facing repos, `INDEX.md` in doc sets); it links every document in the folder by title and every subfolder by its index, one line each in the form `[title](path): when to read it` (a bare path is the one index shape agents measurably ignore or load whole). Keep an index under about 200 lines and read on demand; skip a folder index when the parent already lists every file in it. The root index is the entry point, so every document is reachable in two hops.
+- Every document ends with a `Related:` line linking the documents it builds on, contradicts or supersedes; those edges carry meaning and Obsidian turns them into backlinks and the graph. A link back to the index is optional: the index-to-document edge is what Obsidian shows, so add at most one `Up:` line, and only for readers without a backlinks pane (GitHub).
 - Relative markdown links, URL-encoded (`[Beta](notes/Beta%20two.md)`, `../decisions/2026-09-06-x.md`, `#heading` anchors). Wikilinks only inside a vault nobody reads on GitHub, and then with unique basenames.
 - Frontmatter with `title`, `date`, `tags: [a, b]` (a YAML list) and `aliases` when a note has a second name; Obsidian reads these as properties, everlast generates its index from them, GitHub shows them as a table.
 - Distinct basenames within the unit (a date prefix does it). Headings and callouts as GitHub renders them (`> [!NOTE]`); Obsidian adds folding on top.

@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20260918-6 · 2026-09-18 · Step 3 follows Evergreen Protocol 1.9: index lines carry a purpose clause, an index stays under about 200 lines, a link back to the index is optional
+- because: user request (indexes as a net positive for agents and people, back-links only where they earn their place) and the research logged as evergreen-protocol:R-20260918-2 (on-demand maps help, always-on overviews do not, bare-path index lines are a measured smell)
+- files: SKILL.md §Step 3
+- `--fix-index` still writes title-only lines; adding the first sentence of each file as the purpose clause is the next script change.
+
 ### C-20260918-5 · 2026-09-18 · `--probe` finds the Windows shim beside the app and lists the registered vaults
 - because: L-001 (the CLI worked by full path before the shell saw the new PATH)
 - files: scripts/vault_lint.py (`probe`), SKILL.md §Step 5, LEARNINGS.md
