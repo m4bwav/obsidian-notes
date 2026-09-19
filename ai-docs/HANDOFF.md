@@ -10,7 +10,7 @@ Nothing open. Eval cases trigger-1 and outcome-1 have not been run through the h
 See [INDEX.md](INDEX.md): relative markdown links plus an index per folder; two vaults; kepano/obsidian-skills named as context only, never installed (owner preference).
 
 ## Next single action
-Watch the first CI run on the public repo (the Windows job exercises the cp1252 console path); then run the two unrun eval cases with `evergreen-test`.
+Run the two unrun eval cases (trigger-1, outcome-1) with `evergreen-test`. CI is green on ubuntu, macOS and Windows for Python 3.9 and 3.13; release v0.1.0 ships `obsidian-notes-0.1.0.zip`.
 
 ## Gotchas
 `everlast.py note` truncates slugs at about 60 characters; write `Related:` links after the file exists or check the printed path. Bash heredocs with `'EOF'` still need Python raw strings for `\m`-style Windows paths.
