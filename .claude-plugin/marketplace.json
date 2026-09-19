@@ -1,0 +1,8 @@
+{
+  "name": "obsidian-notes",
+  "owner": { "name": "Mark Rogers" },
+  "metadata": { "description": "Obsidian-compatible markdown for AI agents: linked, indexed, portable" },
+  "plugins": [
+    { "name": "obsidian-notes", "source": "./", "description": "Lint, link and index markdown so it navigates in Obsidian and still renders on GitHub; set a folder up as a vault; drive the Obsidian CLI" }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "obsidian-notes",
+  "version": "0.1.0",
+  "description": "Reads, writes and maintains markdown so it works as an Obsidian vault and still renders on GitHub and in VS Code: a lint for broken and ambiguous links, orphans, duplicate basenames, missing index files and bad frontmatter; an index (map of content) writer; a wikilink-to-relative-markdown-link converter; one command to set a folder up as a vault; and the official Obsidian CLI when it is enabled. Evergreen: the skill re-researches Obsidian, its CLI and the agent integrations around it on a schedule and carries the evals that prove it works.",
+  "author": {
+    "name": "Mark Rogers"
+  },
+  "license": "MIT",
+  "keywords": [
+    "obsidian",
+    "markdown",
+    "wikilinks",
+    "backlinks",
+    "map-of-content",
+    "index",
+    "lint",
+    "vault",
+    "agent-skills",
+    "evergreen"
+  ],
+  "skills": "./skills",
+  "repository": "https://github.com/m4bwav/obsidian-notes",
+  "homepage": "https://github.com/m4bwav/obsidian-notes"
+}

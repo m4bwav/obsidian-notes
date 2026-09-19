@@ -1,0 +1,60 @@
+{
+  "skill": "obsidian-notes",
+  "_format": "skill-creator evals.json plus evergreen fields (kind, decoy, evidence, baseline). Native harness: `claude plugin eval` with tool_used graders; the evidence rules below map onto tool_used input_match. Rules: the evergreen plugin's protocol/TESTING.md.",
+  "evals": [
+    {
+      "id": "trigger-1",
+      "kind": "trigger",
+      "prompt": "I want to open my project's ai-docs folder in Obsidian. Can you check that the notes are linked together properly and fix whatever is broken?",
+      "expectations": ["the obsidian-notes skill is invoked"],
+      "runs": 3
+    },
+    {
+      "id": "trigger-2",
+      "kind": "trigger",
+      "prompt": "these markdown files are a mess, half of them aren't linked from anywhere. make an index and link them up so I can browse them in obsidian",
+      "expectations": ["the obsidian-notes skill is invoked"],
+      "runs": 3
+    },
+    {
+      "id": "decoy-1",
+      "kind": "trigger",
+      "decoy": true,
+      "prompt": "write down what we learned this session about the Unity build error before you finish",
+      "expectations": ["obsidian-notes is not invoked (everlast-capture's job)"],
+      "runs": 3
+    },
+    {
+      "id": "decoy-2",
+      "kind": "trigger",
+      "decoy": true,
+      "prompt": "build a knowledge graph of this codebase so I can ask which modules depend on the renderer",
+      "expectations": ["obsidian-notes is not invoked (graphify's job)"],
+      "runs": 3
+    },
+    {
+      "id": "action-1",
+      "kind": "action",
+      "prompt": "lint the markdown folder at <fixture> for obsidian: broken links, orphans, missing index files. write any missing index files and tell me what is left for me to decide",
+      "files": ["evals/fixtures/vault"],
+      "expectations": ["vault_lint.py ran on the fixture (trace) and an INDEX.md now exists in the fixture's notes/ folder; the reply reports before and after counts, not just 'done'"],
+      "evidence": {
+        "type": "trace",
+        "tool": "Bash",
+        "input_match": "vault_lint\\.py",
+        "and": {"type": "file", "path": "<fixture>/notes/INDEX.md", "exists": true}
+      },
+      "baseline": "without the skill a fresh session greps for links by hand or writes an ad hoc script, rarely writes the index, and often recommends wikilinks",
+      "runs": 3
+    },
+    {
+      "id": "outcome-1",
+      "kind": "outcome",
+      "prompt": "convert the wikilinks in <fixture> to links that also work on GitHub, then confirm nothing is broken",
+      "files": ["evals/fixtures/vault"],
+      "expectations": ["after the run, `vault_lint.py <fixture>` reports no broken wikilinks and only the ambiguous [[Beta]] left as a wikilink; the reply names that ambiguous link and the deliberate broken nope.md link for the user instead of guessing"],
+      "evidence": {"type": "command", "run": "python scripts/vault_lint.py <fixture> --json", "check": "broken_wikilinks == [] and wikilinks == len(ambiguous_wikilinks)"},
+      "runs": 3
+    }
+  ]
+}

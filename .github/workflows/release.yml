@@ -1,0 +1,43 @@
+# Official releases. Push a tag `vX.Y.Z` (matching .claude-plugin/plugin.json) and this job runs the
+# self-test, zips the skill folder and publishes it as a GitHub release.
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: version in plugin.json must match the tag
+        run: |
+          v=$(python -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])")
+          test "v$v" = "${GITHUB_REF_NAME}" || { echo "plugin.json says $v, tag is ${GITHUB_REF_NAME}"; exit 1; }
+      - name: self-test
+        run: python skills/obsidian-notes/scripts/test_vault_lint.py
+      - name: pack the skill
+        run: |
+          mkdir dist
+          python - <<'EOF'
+          import os, zipfile
+          v = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          with zipfile.ZipFile(f"dist/obsidian-notes-{v}.zip", "w", zipfile.ZIP_DEFLATED) as z:
+              for root, dirs, files in os.walk("skills/obsidian-notes"):
+                  dirs[:] = [d for d in dirs if d != "__pycache__"]
+                  for f in files:
+                      p = os.path.join(root, f)
+                      z.write(p, os.path.relpath(p, "skills"))
+          EOF
+      - name: publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --title "obsidian-notes ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            --notes "Install: unzip into your agent's skills folder (~/.claude/skills, ~/.agents/skills or .cursor/skills), or clone the repository and add it as a Claude Code marketplace. Reasoned changes: skills/obsidian-notes/CHANGELOG.md."
