@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20260926-1 · 2026-09-26 · Description shortened to 992 characters (was about 1,200, over the 1,024 spec cap); version 0.1.1
+- because: user request (the description exceeded the Agent Skills spec's 1,024-character limit, which some hosts enforce by dropping the skill)
+- files: SKILL.md front matter `description`, .claude-plugin/plugin.json (0.1.1)
+- Every quoted trigger phrase and every capability is kept; the CLI subcommand list and the vault setup details moved out of the description (they are in the body). The key use case now comes first.
+
 ### C-20260918-6 · 2026-09-18 · Step 3 follows Evergreen Protocol 1.9: index lines carry a purpose clause, an index stays under about 200 lines, a link back to the index is optional
 - because: user request (indexes as a net positive for agents and people, back-links only where they earn their place) and the research logged as evergreen-protocol:R-20260918-2 (on-demand maps help, always-on overviews do not, bare-path index lines are a measured smell)
 - files: SKILL.md §Step 3
