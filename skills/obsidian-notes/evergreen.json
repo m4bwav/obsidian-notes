@@ -51,5 +51,30 @@
     "failing": [],
     "last_failure": null,
     "research_after_days": null
+  },
+  "worth": {
+    "checked": "2026-10-01",
+    "skills": {
+      "obsidian-notes": {
+        "verdict": "CUT",
+        "why": "no gain beyond noise (+20 points (noise margin 25)) at 1.24x the cost",
+        "body_tokens": 2633,
+        "listing_tokens": 248,
+        "specific_share": 0.69,
+        "delta": 0.2,
+        "cost_ratio": 1.24,
+        "modes": [
+          4
+        ],
+        "gaps": 0,
+        "checked": "2026-10-01",
+        "uses": {
+          "days": 60,
+          "interactive": 0,
+          "subagent": 2,
+          "headless": 0
+        }
+      }
+    }
   }
 }
