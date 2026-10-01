@@ -56,8 +56,8 @@
     "checked": "2026-10-01",
     "skills": {
       "obsidian-notes": {
-        "verdict": "UNPROVEN",
-        "why": "no gain beyond noise (+20 points (noise margin 25)) at about the same cost; add runs or sharper cases before deciding",
+        "verdict": "KEEP",
+        "why": "Parked 2026-10-01 on the owner's ruling: kept (A/B with 10/10, without 8/10, cost x0.99 after the trim), but unloaded from the session listing because it had no interactive use in 60 days; it still runs when named (tidy.py park, index line in ~/.claude/CLAUDE.md). Unpark with tidy.py unpark obsidian-notes if Obsidian work picks up.",
         "body_tokens": 2003,
         "listing_tokens": 248,
         "specific_share": 0.75,
@@ -73,7 +73,9 @@
           "interactive": 0,
           "subagent": 2,
           "headless": 0
-        }
+        },
+        "manual": true,
+        "ruled": "2026-10-01"
       }
     }
   }
