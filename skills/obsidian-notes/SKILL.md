@@ -7,9 +7,9 @@ description: "Makes a folder of markdown work as an Obsidian vault that still re
 
 Make a folder of markdown a navigable graph: every document reachable from an index, every dependency an explicit link, links that resolve in Obsidian, on GitHub and in VS Code alike. The script does the deterministic part (find, fix, configure); you do the judgment (what should link to what, what an index says, whether a vault split is right).
 
-Facts this skill relies on (2026-09-18): Obsidian ships an official CLI since 1.12.4 (February 2026; the help page asks for the 1.12.7 or newer installer, shown under Settings > General): `obsidian search|read|create|append|links|backlinks|tags|property:set`, enabled in Settings > General > Command line interface; it needs the app running and launches it otherwise. Obsidian treats `[[Note]]` and `[Note](Note.md)` as equivalent; the setting `Use [[Wikilinks]]` off plus "New link format: relative" makes it write portable links. GitHub still does not render wikilinks. kepano/obsidian-skills (the Obsidian CEO's skill set) exists and prefers wikilinks because it assumes a vault-only reader; this skill does not use it and takes the opposite rule, relative markdown links. Details and sources: [RESEARCH.md](RESEARCH.md), [references/setup.md](references/setup.md).
+Obsidian treats `[[Note]]` and `[Note](Note.md)` alike, and GitHub does not render wikilinks, so this skill writes relative markdown links (kepano/obsidian-skills prefers wikilinks for vault-only readers; this skill takes the opposite rule). Sources: [RESEARCH.md](RESEARCH.md); Obsidian settings, the CLI and agent integrations: [references/setup.md](references/setup.md).
 
-`VL` below means `python "<this folder>/scripts/vault_lint.py"` with an absolute path (`python3` on macOS and Linux; standard library only, Python 3.9 or newer).
+`VL` below means `python "<this folder>/scripts/vault_lint.py"` with an absolute path: `python` on Windows (Git Bash and PowerShell alike; `python3` there is often a Store stub), `python3` on macOS and Linux. Standard library only, Python 3.9 or newer. `VL --help` holds the rules the script applies (how links resolve, what counts as an index, which folders it skips); read it only when a finding surprises you.
 
 ## Step 0: freshness (every use, one read)
 
@@ -17,21 +17,20 @@ Read `evergreen.json` next to this file. If `contradiction` is set or today is o
 
 ## Step 1: find the root and the reader
 
-Decide which folder is the unit of navigation: the vault root if the user has one (a `.obsidian/` folder), otherwise the folder they named, otherwise the repo's docs root (`ai-docs/`, `docs/`, or the repo root). Ask yourself who reads it: only agents (an index per folder is enough), a person in Obsidian (links must resolve there), or GitHub too (relative markdown links only, no wikilinks). When in doubt assume all three; relative markdown links satisfy all three.
+The unit of navigation is the vault root (a `.obsidian/` folder), else the folder the user named, else the repo's docs root. Unless the user says the notes are read only in Obsidian, assume GitHub and VS Code readers too: relative markdown links serve all three.
 
 ## Step 2: lint, then act on the report (the core action, leaves evidence)
 
-Run `VL <root>` (add `--json` when the folder is large; `--exclude NAME ...` skips folder names at any depth, on top of the default skips: hidden folders, `node_modules`, `__pycache__`, `venv`, `.venv`, `Library`, `Temp`, `obj`, `Logs`, `Builds`, `bin`, `dist`, `build`). The report is the evidence: it must appear in the trace before you say anything about the state of the notes. Then:
+Run `VL <root>` (`--json` for a large folder, `--exclude NAME ...` for more folders to skip). The report must appear in the trace before you say anything about the state of the notes. Then, per finding:
 
-- Broken markdown links: fix the target. The script reports a missing file, a literal space in the target (write `%20` or wrap the target in `<...>`), and a target whose case differs from the file on disk (resolves on Windows and macOS, a 404 on GitHub and Linux). A link to a folder resolves to that folder's index when it has one; a bare name resolves to `name.md`; reference-style definitions count.
-- Broken or ambiguous wikilinks: rename to unique basenames or replace with a relative markdown link. `VL <root> --to-markdown-links` rewrites every wikilink that resolves to exactly one file (a folder-qualified name such as `[[notes/Beta]]` counts as resolved), encodes anchors, and leaves embeds, ambiguous and unresolved names, code blocks and frontmatter alone.
-- Duplicate basenames: rename when both files are yours to rename. In a vault that spans two copies of one repo (a public clone and a private fork), do not rename; that vault must use markdown links, which are path-based and unaffected.
-- Folders without an index: `VL <root> --fix-index` writes an `INDEX.md` that links each file by its H1 title and each child folder by its index, then links the new index from the nearest index above it (never a generated everlast `INDEX.md`, which is rebuilt from frontmatter). A folder counts as indexed when it holds `README.md`, `INDEX.md`, `_index.md`, `MOC.md` or `SKILL.md` (any case) or a file named after the folder, or when index files anywhere in the tree link every markdown file in it (the everlast root index does this for its subfolders). Never overwrite an existing index; edit it.
-- Orphans: link each from the index or from the document it belongs to. Only an index at the root is exempt, so a subfolder's index must itself be linked. Ask whether an orphan is a draft to delete before linking it.
-- Frontmatter errors: the check is a quick one (opened but never closed, tab-indented, a line without a key), not a YAML parser. Fix the YAML; Obsidian shows a file with invalid frontmatter as having no properties.
-- Links outside the root: a warning; Obsidian cannot follow a link that leaves the vault.
+- Broken markdown link (missing file, a space in the target, a case that differs from the file on disk, which is a 404 on GitHub and Linux): fix the target when the right one is clear; otherwise leave the link and name it for the user. Never invent the missing file.
+- Ambiguous or broken wikilink: `VL <root> --to-markdown-links` rewrites every wikilink that resolves to exactly one file and leaves ambiguous ones alone; name each ambiguous link and its candidates for the user instead of guessing, or qualify it (`[[notes/Beta]]`) only when the context makes the target certain.
+- Duplicate basenames: rename when both files are yours; never in a vault spanning a public clone and a private fork (markdown links are path-based and unaffected).
+- Folder without an index: `VL <root> --fix-index` writes `INDEX.md` linking each file by its H1 title and links it from the nearest index above, so the new index is not itself an orphan. Never overwrite an existing index; edit it.
+- Orphan: link it from its folder's index or the document it belongs to; say which orphans may be drafts to delete.
+- Frontmatter error: fix the YAML (Obsidian shows invalid frontmatter as no properties). Link outside the root: a warning; Obsidian cannot follow it.
 
-Run `VL <root>` again; exit code 0 means no error-class findings (a root that does not exist is exit 2, not a clean run). Report the before and after counts.
+The fix flags combine in one call (`VL <root> --fix-index --to-markdown-links`) and print the after-report themselves, so that is the after count; run `VL <root>` again only after hand edits. Exit 0 means no error-class findings (exit 1 is normal while a broken or ambiguous link is left for the user; exit 2: the root does not exist). Report the before and after counts.
 
 ## Step 3: write markdown that links (when creating or editing notes)
 
@@ -42,15 +41,11 @@ Run `VL <root>` again; exit code 0 means no error-class findings (a root that do
 - Distinct basenames within the unit (a date prefix does it). Headings and callouts as GitHub renders them (`> [!NOTE]`); Obsidian adds folding on top.
 - Do not write `.obsidian/workspace.json` or other per-machine state into a repo.
 
-## Step 4: vault setup and the one-or-many question
+## Step 4: vault setup, one vault or several, the Obsidian CLI (only when asked)
 
-`VL <root> --vault-init [--ignore Folder ...]` writes `.obsidian/app.json` (markdown links on, relative link format, links updated on rename, unsupported file types hidden, build folders such as `Library/`, `Temp/`, `obj/`, `node_modules/` ignored when they exist under the root, plus every `--ignore` name) and the `.gitignore` lines that keep `workspace.json` local. Then the user opens the folder with "Open folder as vault". For a Unity or other build-heavy repo, open the repo root with those ignores rather than a subfolder, so `ai-docs/` and `docs/` share one graph.
-
-One vault or several: one vault per tree that links inside itself and not across. Separate vaults cost cross-links, one search, one graph, and duplicated plugin settings; they pay off when two trees never reference each other, sit on different drives, need different sync or privacy, or one is huge. A vault that spans a public clone and a private fork of the same repo works only with markdown links (duplicate basenames make wikilinks ambiguous). Say which pattern fits and why, then set it up.
-
-## Step 5: the Obsidian CLI (optional)
-
-`VL --probe` says whether `obsidian` is on PATH, or where the Windows shim `Obsidian.com` sits beside the app when the toggle was just turned on and the shell predates it (call it by that full path), and which vaults are registered. When it runs, prefer Obsidian's own resolver for questions about a live vault (`vault=<display name>` first, files by vault-relative `path=`): `obsidian search query=<text> path=<folder>`, `obsidian read file=<name>`, `obsidian links file=<name>`, `obsidian backlinks file=<name> format=json`, `obsidian tags counts`, `obsidian append file=<name> content=<text>`. Prefix `vault=<name>` to target a vault. The CLI launches the app if it is closed; do not use it in a headless run (Obsidian Headless is a separate sync client, not a headless CLI). The Local REST API plugin's built-in MCP endpoint and the mcp-obsidian bridge are alternatives; they are only worth installing for a long-running agent inside Obsidian (see [references/setup.md](references/setup.md)).
+- Setup: `VL <root> --vault-init [--ignore Folder ...]` writes `.obsidian/app.json` (markdown links, relative paths, build folders ignored) and the `.gitignore` lines that keep `workspace.json` local; then "Open folder as vault". For a build-heavy repo open the repo root with ignores, so `ai-docs/` and `docs/` share one graph.
+- One vault or several: one vault per tree that links inside itself; split only for trees that never cross-link, need different sync or privacy, or are huge. Say which and why in two sentences; the reasoning is in [references/setup.md](references/setup.md).
+- CLI: `VL --probe` says whether `obsidian` (or the Windows shim `Obsidian.com`) is reachable and which vaults exist. It drives a running app and launches it when closed, so never use it in a headless run; commands and integrations: [references/setup.md](references/setup.md).
 
 ## Output
 
