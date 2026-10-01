@@ -55,6 +55,7 @@
       "files": ["evals/fixtures/vault"],
       "expectations": ["notes/ and plans/ each have an index that links every note in the folder with a relative markdown link, every note is reachable from README.md, every relative link resolves with its case on disk except nope.md, [missing](nope.md) is still there and no nope.md was invented, README.md still points at Beta"],
       "evidence": {"type": "file", "path": "evals/fixtures/vault/README.md", "check": "python evals/check_vault.py evals/fixtures/vault exits 0"},
+      "baseline": "2026-10-01, sonnet, evergreen.py worth --ab (T-20261001-1): without the skill 4 of 5 passed, the failure wrote wikilink indexes GitHub cannot render; with it 5 of 5",
       "runs": 3
     },
     {
@@ -71,6 +72,7 @@
         "regex on the answer: nope\\.md"
       ],
       "evidence": {"type": "file", "path": "evals/fixtures/vault/README.md", "check": "python evals/check_vault.py evals/fixtures/vault --task convert exits 0"},
+      "baseline": "2026-10-01, sonnet, evergreen.py worth --ab (T-20261001-1): without the skill 4 of 5 passed, the failure left [[gamma]] unconverted and never named nope.md; with it 5 of 5",
       "runs": 3
     }
   ]
