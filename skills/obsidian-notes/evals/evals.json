@@ -48,15 +48,6 @@
       "runs": 3
     },
     {
-      "id": "outcome-1",
-      "kind": "outcome",
-      "prompt": "convert the wikilinks in <fixture> to links that also work on GitHub, then confirm nothing is broken",
-      "files": ["evals/fixtures/vault"],
-      "expectations": ["after the run, `vault_lint.py <fixture>` reports no broken wikilinks and only the ambiguous [[Beta]] left as a wikilink; the reply names that ambiguous link and the deliberate broken nope.md link for the user instead of guessing"],
-      "evidence": {"type": "command", "run": "python scripts/vault_lint.py <fixture> --json", "check": "broken_wikilinks == [] and wikilinks == len(ambiguous_wikilinks)"},
-      "runs": 3
-    },
-    {
       "id": "action-3",
       "kind": "action",
       "_why": "action-1 graded on the result instead of the route: evals/check_vault.py judges the vault's end state, so a run without vault_lint.py can pass. Literal path because worth --ab copies `files` to the same relative path and does not substitute <fixture>.",
@@ -69,28 +60,17 @@
     {
       "id": "outcome-2",
       "kind": "outcome",
-      "_why": "outcome-1 graded on the result: its pseudo-code check cannot run under worth --ab. Edit and a shell are added so both arms can change files; the outcome default grants neither.",
+      "_why": "Replaces outcome-1 (removed 2026-10-01), whose pseudo-code check worth --ab could not run. Graded on the result (check_vault.py) and on the reply naming both traps (the answer regexes, graded with the evidence since evergreen 0.12.1). Edit and a shell are added so both arms can change files; the outcome default grants neither.",
       "prompt": "convert the wikilinks in evals/fixtures/vault to links that also work on GitHub, then confirm nothing is broken",
       "files": ["evals/fixtures/vault"],
       "tools": ["Edit", "Bash(python *)", "Bash(ls*)", "Bash(cat *)", "PowerShell(python *)", "PowerShell(Get-ChildItem*)", "PowerShell(Get-Content *)"],
       "max_turns": 30,
-      "expectations": ["no wikilink that resolves to exactly one file is left ([[gamma]] becomes a relative link), every relative link resolves except nope.md, [missing](nope.md) is still there and no nope.md was invented, README.md still points at Beta"],
-      "evidence": {"type": "file", "path": "evals/fixtures/vault/README.md", "check": "python evals/check_vault.py evals/fixtures/vault --task convert exits 0"},
-      "runs": 3
-    },
-    {
-      "id": "outcome-2-answer",
-      "kind": "outcome",
-      "_why": "The reply half of outcome-2. worth --ab grades a regex on the answer only when a case has no evidence, so it is a case of its own; same prompt, so outcome-2's transcripts can be graded with it instead of paying for new runs.",
-      "prompt": "convert the wikilinks in evals/fixtures/vault to links that also work on GitHub, then confirm nothing is broken",
-      "files": ["evals/fixtures/vault"],
-      "tools": ["Edit", "Bash(python *)", "Bash(ls*)", "Bash(cat *)", "PowerShell(python *)", "PowerShell(Get-ChildItem*)", "PowerShell(Get-Content *)"],
-      "max_turns": 30,
-      "redundant": true,
       "expectations": [
+        "no wikilink that resolves to exactly one file is left ([[gamma]] becomes a relative link), every relative link resolves except nope.md, [missing](nope.md) is still there and no nope.md was invented, README.md still points at Beta",
         "regex on the answer: \\bBeta\\b.{0,300}(ambigu|two (files|notes)|both|duplicate|more than one)|(ambigu|two (files|notes)|both|duplicate|more than one).{0,300}\\bBeta\\b",
         "regex on the answer: nope\\.md"
       ],
+      "evidence": {"type": "file", "path": "evals/fixtures/vault/README.md", "check": "python evals/check_vault.py evals/fixtures/vault --task convert exits 0"},
       "runs": 3
     }
   ]
