@@ -4,6 +4,16 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261001-2 · 2026-10-01 · Body trimmed 26 percent with no loss on the A/B; `python` on Windows; one combined fix call; version 0.2.0
+- because: the owner's request (update the tested skill with every token saving found); T-20261001-1 (cost x1.24 for a gain inside the noise), L-002, L-003, L-004; T-20261001-2 (the trimmed skill: 10/10, cost x0.99)
+- files: SKILL.md (intro: the facts paragraph cut to the link-form rule and a pointer to RESEARCH.md and references/setup.md; the `VL` line; Step 1 cut to two sentences; Step 2 keeps the judgement per finding and points at `VL --help` for the rules the script applies; Steps 4 and 5 merged into one short step pointing at references/setup.md, which already held the vault-split reasoning, the CLI and the integrations), .claude-plugin/plugin.json (0.2.0)
+- Body about 2,633 to 2,003 estimated tokens. The description is unchanged, so triggering is unchanged.
+
+### C-20261001-1 · 2026-10-01 · Value cases graded on the result: action-3, outcome-2 and `evals/check_vault.py`; outcome-1 retired
+- because: the skill worth study (action-1 passes only through `vault_lint.py`, and outcome-1's pseudo-code check cannot run under `evergreen.py worth --ab`); T-20261001-1
+- files: evals/evals.json (action-3, outcome-2 with answer regexes, dated baselines; outcome-1 removed), evals/check_vault.py (new: grades the fixture's end state for the index and convert tasks, `--loose` for any resolving link; proven on hand-made right and wrong copies and on the script's own output)
+- A run without the skill can now pass by producing the right vault, so a gain means a better result, not the skill's route.
+
 ### C-20260926-1 · 2026-09-26 · Description shortened to 992 characters (was about 1,200, over the 1,024 spec cap); version 0.1.1
 - because: user request (the description exceeded the Agent Skills spec's 1,024-character limit, which some hosts enforce by dropping the skill)
 - files: SKILL.md front matter `description`, .claude-plugin/plugin.json (0.1.1)
