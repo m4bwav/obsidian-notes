@@ -13,9 +13,9 @@
   "source": null,
   "topic": "Obsidian-compatible markdown for AI agents: link forms that work in Obsidian, GitHub and VS Code, index and map-of-content practice, the Obsidian CLI and agent integrations, vault layout",
   "tier": "fast",
-  "interval_days": 14,
-  "last_checked": "2026-09-18",
-  "next_due": "2026-10-02",
+  "interval_days": 14.0,
+  "last_checked": "2026-10-03",
+  "next_due": "2026-10-16",
   "verify_at_use": false,
   "volatile_claims": [],
   "contradiction": null,
@@ -32,12 +32,18 @@
       "m": null,
       "interval_after": 14,
       "note": "created"
+    },
+    {
+      "date": "2026-10-03",
+      "m": 0.2,
+      "interval_after": 14.0,
+      "note": "quiet: Obsidian 1.14.x Catalyst (outside-vault files, Bases kanban) noted, GitHub still no wikilinks, new linters wikilink-first; no SKILL change; cost: searches 6 · fetches 3 · tool calls 22"
     }
   ],
   "counts": {
     "learnings": 4,
     "changes": 8,
-    "research": 5,
+    "research": 6,
     "tests": 3
   },
   "consolidate_every": 25,
