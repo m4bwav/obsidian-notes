@@ -20,5 +20,8 @@
   ],
   "skills": "./skills",
   "repository": "https://github.com/m4bwav/obsidian-notes",
-  "homepage": "https://github.com/m4bwav/obsidian-notes"
+  "homepage": "https://github.com/m4bwav/obsidian-notes",
+  "documentationUrl": "https://github.com/m4bwav/obsidian-notes#readme",
+  "supportUrl": "https://github.com/m4bwav/obsidian-notes/issues",
+  "privacyPolicyUrl": "https://github.com/m4bwav/obsidian-notes#privacy"
 }
