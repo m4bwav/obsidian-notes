@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261005-1 · 2026-10-05 · Root plugin.json for GitHub Copilot CLI and awesome-copilot; version 0.2.1
+- because: user request (list the plugin in github/awesome-copilot, whose intake gates never read `.claude-plugin/`)
+- files: ../../plugin.json (new), .claude-plugin/plugin.json (0.2.1)
+- The skill is unchanged. Copilot CLI 1.0.92 installs it from the root manifest and `vally lint` passes; the release tag v0.2.1 is the ref awesome-copilot pins.
+
 ### C-20261001-2 · 2026-10-01 · Body trimmed 26 percent with no loss on the A/B; `python` on Windows; one combined fix call; version 0.2.0
 - because: the owner's request (update the tested skill with every token saving found); T-20261001-1 (cost x1.24 for a gain inside the noise), L-002, L-003, L-004; T-20261001-2 (the trimmed skill: 10/10, cost x0.99)
 - files: SKILL.md (intro: the facts paragraph cut to the link-form rule and a pointer to RESEARCH.md and references/setup.md; the `VL` line; Step 1 cut to two sentences; Step 2 keeps the judgement per finding and points at `VL --help` for the rules the script applies; Steps 4 and 5 merged into one short step pointing at references/setup.md, which already held the vault-split reasoning, the CLI and the integrations), .claude-plugin/plugin.json (0.2.0)
