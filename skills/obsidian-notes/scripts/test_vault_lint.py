@@ -243,6 +243,44 @@ def main():
         code, d = scan_json(o / "vault")
         check("link outside the root reported as a warning", len(d["links_outside_root"]) == 1 and d["broken_md_links"] == [], (d["links_outside_root"], d["broken_md_links"]))
 
+        # 12. Changes of 2026-10-06 (C-20261006-1).
+        # 12a. A file that links only to itself is still an orphan.
+        sl = tmp / "selflink"
+        write(sl / "README.md", "# Root\n")
+        write(sl / "lonely.md", "# Lonely\n\n[me](lonely.md#top) [[lonely]]\n")
+        code, d = scan_json(sl)
+        check("self-link does not rescue an orphan", d["orphans"] == ["lonely.md"], d["orphans"])
+        # 12b. --fix-index writes a purpose clause: frontmatter description first, else the first sentence of prose.
+        pc = tmp / "purpose"
+        write(pc / "README.md", "# Root\n")
+        write(pc / "notes" / "a.md", "---\ntitle: A\ndescription: \"Why we chose relative links\"\n---\n# A\n\nIgnored body.\n")
+        write(pc / "notes" / "b.md", "# B\n\n```\ncode first\n```\n\n- a list\n\nRead this before a [release](a.md). More text here.\n")
+        write(pc / "notes" / "c.md", "# C\n\n" + "word " * 60 + "\n")
+        write(pc / "notes" / "d.md", "# D\n\nRelated: [A](a.md)\n")
+        write(pc / "notes" / "e.md", "# E\n\nBack to [the index](INDEX.md).\n\nThe real summary of E.\n")
+        run(pc, "--fix-index")
+        idx = (pc / "notes" / "INDEX.md").read_text(encoding="utf-8")
+        check("purpose clause from frontmatter description", "- [A](a.md): Why we chose relative links\n" in idx, idx)
+        check("purpose clause: first prose sentence, code and lists skipped, link reduced to its label",
+              "- [B](b.md): Read this before a release.\n" in idx, idx)
+        check("purpose clause capped with an ellipsis", any(l.startswith("- [C](c.md): word") and l.endswith("...") and len(l) < 160 for l in idx.splitlines()), idx)
+        check("no clause when the file has no prose (Related: line skipped)", "- [D](d.md)\n" in idx, idx)
+        check("a navigation line is skipped for the next paragraph", "- [E](e.md): The real summary of E.\n" in idx, idx)
+        code, d = scan_json(pc)
+        check("purpose-clause index lines still credit their files", d["orphans"] == [] and d["broken_md_links"] == [], (d["orphans"], d["broken_md_links"]))
+        # 12c. --json honours --max: lists cut, counts kept, the cut recorded.
+        code, d = scan_json(tmp / "fixture", "--max", "1")
+        check("json --max cuts lists and records the full length", len(d["folders_without_index"]) <= 1 and d["files"] >= 5, d)
+        code, d = scan_json(n, "--max", "0")
+        check("json --max 0 leaves only counts", all(v == [] for v in d.values() if isinstance(v, list)) and "truncated" in d, d)
+        # 12d. A note moved inside Obsidian keeps its old relative links (forum.obsidian.md/t/4386); the lint reports them.
+        mv = tmp / "moved"
+        write(mv / "README.md", "# Root\n\n[n](deep/note.md)\n")
+        write(mv / "deep" / "note.md", "# Note\n\n[sibling](sibling.md)\n")
+        write(mv / "sibling.md", "# Sibling\n")
+        code, d = scan_json(mv)
+        check("moved note: its stale relative link is reported broken", code == 1 and [x["target"] for x in d["broken_md_links"]] == ["sibling.md"], d["broken_md_links"])
+
         # 10. The repo's own docs pass the lint (fixtures excluded).
         repo = HERE.parent.parent.parent
         code, d = scan_json(repo, "--exclude", "fixtures")

@@ -19,7 +19,9 @@ jobs:
           v=$(python -c "import json;print(json.load(open('.claude-plugin/plugin.json'))['version'])")
           test "v$v" = "${GITHUB_REF_NAME}" || { echo "plugin.json says $v, tag is ${GITHUB_REF_NAME}"; exit 1; }
       - name: self-test
-        run: python skills/obsidian-notes/scripts/test_vault_lint.py
+        run: |
+          python skills/obsidian-notes/scripts/test_vault_lint.py
+          python tests/test_repo.py
       - name: pack the skill
         run: |
           mkdir dist

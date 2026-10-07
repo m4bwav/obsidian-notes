@@ -3,8 +3,8 @@
 graph in Obsidian and still works on GitHub and in VS Code. Standard library only,
 Python 3.9 or newer, Windows, macOS and Linux.
 
-  python vault_lint.py <root> [--json] [--exclude NAME ...] [--max N]
-  python vault_lint.py <root> --fix-index          # write INDEX.md in folders that have none, link it from the nearest index above
+  python vault_lint.py <root> [--json] [--exclude NAME ...] [--max N]   # --max: 15 in text; --json lists all unless given
+  python vault_lint.py <root> --fix-index          # write INDEX.md (title + purpose clause per file) where a folder has none, link it from the index above
   python vault_lint.py <root> --to-markdown-links  # rewrite [[wikilinks]] that resolve to one file as relative markdown links
   python vault_lint.py <root> --vault-init [--ignore FOLDER ...]   # .obsidian/app.json (markdown links, relative paths) + .gitignore lines
   python vault_lint.py --probe                     # is the `obsidian` CLI on PATH (or its Windows shim beside the app), which vaults exist
@@ -156,12 +156,68 @@ def title_of(path, text):
     return title.replace("[", "\\[").replace("]", "\\]")
 
 
+FM_PURPOSE_RE = re.compile(r"^(?:description|summary):[ \t]*(.+?)\s*$", re.M | re.I)
+NOT_PROSE_START = ("#", "|", ">", "<", "- ", "* ", "+ ", "![", "---", "***", "Related:", "Up:")
+
+
+def nav_line(line):
+    """A line that is mostly links ("Back to [index](../README.md).") navigates; it says nothing about the file."""
+    if not (MD_LINK_RE.search(line) or WIKI_RE.search(line)):
+        return False
+    rest = WIKI_RE.sub(" ", MD_LINK_RE.sub(" ", line))
+    return len(re.findall(r"\w+", rest)) < 4
+
+
+def purpose_of(text, limit=120):
+    """One clause saying what a file is, for its index line: the frontmatter description or summary,
+    else the first sentence of prose that is not navigation. Links are reduced to their labels."""
+    end = max(frontmatter_end(text), 0)
+    m = FM_PURPOSE_RE.search(text[:end]) if end else None
+    if m and m.group(1).strip("'\" ") not in ("", ">", "|", ">-", "|-"):
+        clause = m.group(1).strip().strip("'\"")
+    else:
+        paras, para, fence = [], [], None
+        for line in text[end:].splitlines() + [""]:
+            s = line.strip()
+            fm = FENCE_OPEN_RE.match(line)
+            if fence:
+                if fm and fm.group(1)[0] == fence[0]:
+                    fence = None
+                continue
+            if fm:
+                fence = fm.group(1)
+            if fm or not s or s.startswith(NOT_PROSE_START) or re.match(r"\d+[.)]\s", s):
+                if para:
+                    paras.append(" ".join(para))
+                    para = []
+                continue
+            para.append(s)
+        sentences = (x for p in paras for x in re.split(r"(?<=[.!?])\s+", p))
+        clause = next((x for x in sentences if not nav_line(x)), "")
+        if not clause:
+            return ""
+    clause = MD_LINK_RE.sub(lambda x: x.group(1), clause)
+    clause = WIKI_RE.sub(lambda x: (x.group(4) or "").lstrip("\\")[1:] or x.group(2), clause)
+    clause = re.sub(r"\s+", " ", clause).strip().rstrip(":;,")
+    if len(clause) > limit:
+        clause = clause[:limit].rsplit(" ", 1)[0].rstrip(".,;:") + "..."
+    return clause
+
+
 def link_target(m):
     """Target of an MD_LINK_RE / MD_EMBED_RE match: the <...> form or the plain form."""
     return m.group(2) if m.group(2) is not None else m.group(3)
 
 
-def resolve_typed(base, typed):
+def names_in(folder):
+    """Entry names of a folder, or None when it cannot be listed. scan() passes a cached version."""
+    try:
+        return {e.name for e in os.scandir(folder)}
+    except OSError:
+        return None
+
+
+def resolve_typed(base, typed, names_of=names_in):
     """Resolve a typed relative path against the disk one component at a time.
     Returns (exact_case, path): path is None when nothing matches even case-insensitively;
     exact_case is False when it only matches with a different case (Windows and macOS resolve
@@ -173,9 +229,8 @@ def resolve_typed(base, typed):
         if part == "..":
             cur = cur.parent
             continue
-        try:
-            names = {e.name for e in os.scandir(cur)}
-        except OSError:
+        names = names_of(cur)
+        if names is None:
             return exact, None
         last = i == len(parts) - 1
         if part in names:
@@ -193,12 +248,12 @@ def resolve_typed(base, typed):
     return exact, cur
 
 
-def index_in(folder):
+def index_in(folder, names_of=names_in):
     """The index file of a folder, if any (README.md first)."""
-    try:
-        names = {e.name.lower(): e.name for e in os.scandir(folder)}
-    except OSError:
+    listed = names_of(folder)
+    if listed is None:
         return None
+    names = {n.lower(): n for n in listed}
     for n in INDEX_NAMES:
         if n in names:
             return folder / names[n]
@@ -234,21 +289,18 @@ def resolve_wikilink(name, embed, by_base, by_name_any):
 
 # ---------- walking ----------
 
-def md_files(root, excludes):
+def walk(root, excludes):
+    """One pass over the tree: (markdown files in sorted order, every file)."""
     skip = SKIP_DIRS | set(excludes)
+    md, every = [], []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = sorted(d for d in dirnames if d not in skip and not d.startswith("."))
         for f in sorted(filenames):
+            p = Path(dirpath) / f
+            every.append(p)
             if f.lower().endswith(".md"):
-                yield Path(dirpath) / f
-
-
-def all_files(root, excludes):
-    skip = SKIP_DIRS | set(excludes)
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in skip and not d.startswith(".")]
-        for f in filenames:
-            yield Path(dirpath) / f
+                md.append(p)
+    return md, every
 
 
 def rel(p, root):
@@ -262,9 +314,9 @@ def rel(p, root):
     return posix(p)
 
 
-def under(path, root):
+def under(resolved, root):
     try:
-        Path(path).resolve().relative_to(root)
+        resolved.relative_to(root)
         return True
     except ValueError:
         return False
@@ -274,14 +326,30 @@ def under(path, root):
 
 def scan(root, excludes):
     root = Path(root).resolve()
-    files = list(md_files(root, excludes))
+    files, every = walk(root, excludes)
     by_base, by_name_any = {}, {}
     for p in files:
         by_base.setdefault(p.stem.lower(), []).append(p)
-    for p in all_files(root, excludes):
+    for p in every:
         by_name_any.setdefault(p.name.lower(), []).append(p)
         by_name_any.setdefault(p.stem.lower(), []).append(p)
-    inbound = {p.resolve(): [0, p] for p in files}
+    # Folder listings and resolved paths are cached for this scan only: on a big tree they were most
+    # of the run time (one scandir per link component, two realpath calls per link).
+    listings, resolved = {}, {}
+
+    def names_of(folder):
+        key = str(folder)
+        if key not in listings:
+            listings[key] = names_in(folder)
+        return listings[key]
+
+    def res(p):
+        key = str(p)
+        if key not in resolved:
+            resolved[key] = Path(p).resolve()
+        return resolved[key]
+
+    inbound = {res(p): [0, p] for p in files}
     from_index = set()
     f = {"broken_md_links": [], "broken_wikilinks": [], "ambiguous_wikilinks": [], "frontmatter_errors": [],
          "duplicate_basenames": [], "orphans": [], "folders_without_index": [], "links_outside_root": [],
@@ -289,7 +357,9 @@ def scan(root, excludes):
     texts, boms = {}, {}
 
     def credit(cand, src):
-        key = cand.resolve()
+        key = res(cand)
+        if key == res(src):
+            return  # a link to itself does not make a file reachable
         if key in inbound:
             inbound[key][0] += 1
             if src.name.lower() in INDEX_NAMES:
@@ -302,7 +372,7 @@ def scan(root, excludes):
         t = unquote(target.split("#", 1)[0].split("?", 1)[0])
         if not t:
             return
-        exact, cand = resolve_typed(p.parent, t)
+        exact, cand = resolve_typed(p.parent, t, names_of)
         if cand is None:
             f["broken_md_links"].append({"file": rel(p, root), "target": raw})
             return
@@ -310,9 +380,9 @@ def scan(root, excludes):
             f["broken_md_links"].append({"file": rel(p, root), "target": raw + " (case differs from the file on disk)"})
             return
         if cand.is_dir():
-            idx = index_in(cand)
+            idx = index_in(cand, names_of)
             cand = idx if idx else cand
-        if not under(cand, root):
+        if not under(res(cand), root):
             f["links_outside_root"].append({"file": rel(p, root), "target": raw})
             return
         credit(cand, p)
@@ -360,8 +430,8 @@ def scan(root, excludes):
     for p in files:
         folders.setdefault(p.parent, []).append(p)
     for folder, ps in sorted(folders.items()):
-        covered = all(x.resolve() in from_index for x in ps)
-        if index_in(folder) is None and not covered:
+        covered = all(res(x) in from_index for x in ps)
+        if index_in(folder, names_of) is None and not covered:
             f["folders_without_index"].append(rel(folder, root) or ".")
     f["_root"], f["_texts"], f["_boms"], f["_files"], f["_folders"] = root, texts, boms, files, folders
     f["_by_base"], f["_by_name_any"] = by_base, by_name_any
@@ -432,9 +502,11 @@ def fix_index(f):
                     c = c.parent
                 children.add(c)
         lines = [f"# {folder.name or root.name}", "",
-                 "Index of this folder. Each document links back here; add a line when you add a file.", ""]
+                 "Index of this folder: one line per document, saying what it holds. Add a line when you add a file.", ""]
         for p in entries:
-            lines.append(f"- [{title_of(p, f['_texts'][p])}]({quote(p.name)})")
+            text = f["_texts"][p]
+            clause = purpose_of(text)
+            lines.append(f"- [{title_of(p, text)}]({quote(p.name)})" + (f": {clause}" if clause else ""))
         for c in sorted(children):
             below = index_below(c)
             target = f"{c.name}/{below}" if below else f"{c.name}/"
@@ -572,7 +644,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("root", nargs="?", help="folder to check (a vault, a docs folder, a repo)")
     ap.add_argument("--json", action="store_true", help="machine-readable report on stdout (fix messages go to stderr)")
-    ap.add_argument("--max", type=int, default=15, help="items shown per list in the text report")
+    ap.add_argument("--max", type=int, default=None,
+                    help="items shown per list: 15 by default in the text report; --json lists everything unless --max is given")
     ap.add_argument("--exclude", nargs="*", default=[], metavar="NAME", help="folder names to skip, matched at any depth")
     ap.add_argument("--fix-index", action="store_true", help="write INDEX.md where a folder has no index and link it from the index above")
     ap.add_argument("--to-markdown-links", action="store_true", help="rewrite wikilinks that resolve to one file as relative markdown links")
@@ -604,13 +677,17 @@ def main():
         for m in messages:
             print(m, file=sys.stderr)
         out = {k: v for k, v in f.items() if not k.startswith("_")}
+        if a.max is not None:
+            # Counts stay whole; long lists are cut so a big tree's report fits in an agent's context.
+            out["truncated"] = {k: len(v) for k, v in out.items() if isinstance(v, list) and len(v) > a.max}
+            out.update({k: v[:a.max] for k, v in out.items() if isinstance(v, list)})
         out["written"], out["rewritten"] = written, rewritten
         print(json.dumps(out, indent=2))
         errs = error_count(f)
     else:
         for m in messages:
             print(m)
-        errs = report(f, a.max)
+        errs = report(f, 15 if a.max is None else a.max)
     sys.exit(1 if errs else 0)
 
 

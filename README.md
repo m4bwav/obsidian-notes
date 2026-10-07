@@ -15,12 +15,14 @@ The skill is an evergreen unit under the [evergreen protocol](https://github.com
 ## Quick use
 
 ```
-python skills/obsidian-notes/scripts/vault_lint.py <folder>                    # report (exit 1 on errors)
+python skills/obsidian-notes/scripts/vault_lint.py <folder>                    # report (exit 1 on errors), 15 items per list
+python skills/obsidian-notes/scripts/vault_lint.py <folder> --json --max 50    # machine-readable; without --max it lists everything
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --fix-index        # write missing INDEX.md files and link them from above
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --to-markdown-links
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --vault-init --ignore Library Temp   # only folders that exist are auto-detected; --ignore names are always written
 python skills/obsidian-notes/scripts/vault_lint.py --probe                     # is the obsidian CLI on PATH
 python skills/obsidian-notes/scripts/test_vault_lint.py                        # the script's own suite
+python tests/test_repo.py                                                      # manifests, description cap, stdlib-only (runs in CI before every publish)
 ```
 
 Standard-library Python 3.9 or newer (`python` on Windows, `python3` on macOS and Linux); nothing to pip install. Obsidian does not need to be installed or running for the lint.
@@ -37,7 +39,7 @@ Then ask in a session, for example "lint my docs folder for Obsidian" or "make a
 
 ## Privacy
 
-Everything this plugin ships runs on your own machine. The lint, the index writer, the link converter and the vault setup are a standard-library Python script that reads and writes the markdown files in the folder you point it at. It makes no network connections, sends nothing anywhere and keeps no data of its own outside that folder. Links to web addresses in your notes are recognised and skipped, never opened. The probe option looks for an installed Obsidian app and, if the Obsidian command line is on your path, runs it locally to read its version and vault names. The plugin has no hooks, no MCP server and no telemetry, and it reads no credentials or API keys. When you ask for the skill's scheduled research refresh, your agent searches the web with its own tools, under that agent's own privacy terms. Questions or problems go to the [issue tracker](https://github.com/m4bwav/obsidian-notes/issues).
+Everything this plugin ships runs on your own machine. The lint, the index writer, the link converter and the vault setup are a standard-library Python script that reads and writes the markdown files in the folder you point it at. It makes no network connections, sends nothing anywhere and keeps no data of its own outside that folder. Links to web addresses in your notes are recognised and skipped, never opened. The probe option looks for an installed Obsidian app and, if the Obsidian command line is on your path, runs it locally to read its version and vault names. The plugin has no hooks, no MCP server and no telemetry, and it reads no credentials or API keys. When you ask for the skill's scheduled research refresh, your agent searches the web with its own tools, under that agent's own privacy terms. Questions or problems go to the [issue tracker](https://github.com/m4bwav/obsidian-notes/issues); security reports follow [SECURITY.md](SECURITY.md).
 
 ## Versioning
 

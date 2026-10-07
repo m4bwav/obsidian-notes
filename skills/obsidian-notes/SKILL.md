@@ -21,14 +21,15 @@ The unit of navigation is the vault root (a `.obsidian/` folder), else the folde
 
 ## Step 2: lint, then act on the report (the core action, leaves evidence)
 
-Run `VL <root>` (`--json` for a large folder, `--exclude NAME ...` for more folders to skip). The report must appear in the trace before you say anything about the state of the notes. Then, per finding:
+Run `VL <root>` (`--exclude NAME ...` for more folders to skip). The text report gives every count and the first 15 items per list (`--max N`); prefer it to `--json`, which lists everything unless `--max` is given (586 KB on a 3,000-file tree). The report must appear in the trace before you say anything about the state of the notes. Then, per finding:
 
 - Broken markdown link (missing file, a space in the target, a case that differs from the file on disk, which is a 404 on GitHub and Linux): fix the target when the right one is clear; otherwise leave the link and name it for the user. Never invent the missing file.
 - Ambiguous or broken wikilink: `VL <root> --to-markdown-links` rewrites every wikilink that resolves to exactly one file and leaves ambiguous ones alone; name each ambiguous link and its candidates for the user instead of guessing, or qualify it (`[[notes/Beta]]`) only when the context makes the target certain.
 - Duplicate basenames: rename when both files are yours; never in a vault spanning a public clone and a private fork (markdown links are path-based and unaffected).
-- Folder without an index: `VL <root> --fix-index` writes `INDEX.md` linking each file by its H1 title and links it from the nearest index above, so the new index is not itself an orphan. Never overwrite an existing index; edit it.
+- Folder without an index: `VL <root> --fix-index` writes `INDEX.md` linking each file by its H1 title with a purpose clause (frontmatter `description`, else the first sentence of prose) and links it from the nearest index above, so the new index is not itself an orphan. Rewrite a clause that does not say when to read the file. Never overwrite an existing index; edit it.
 - Orphan: link it from its folder's index or the document it belongs to; say which orphans may be drafts to delete.
-- Frontmatter error: fix the YAML (Obsidian shows invalid frontmatter as no properties). Link outside the root: a warning; Obsidian cannot follow it.
+- Frontmatter error: fix the YAML (Obsidian shows invalid frontmatter as no properties). Link outside the root: a warning; Obsidian 1.14 opens single files from outside a vault, but following a vault link to one is undocumented.
+- After notes were moved inside Obsidian, lint again: with relative paths Obsidian updates links to a moved note but not the links inside it (forum thread 4386, open since 2022).
 
 The fix flags combine in one call (`VL <root> --fix-index --to-markdown-links`) and print the after-report themselves, so that is the after count; run `VL <root>` again only after hand edits. Exit 0 means no error-class findings (exit 1 is normal while a broken or ambiguous link is left for the user; exit 2: the root does not exist). Report the before and after counts.
 

@@ -2,28 +2,29 @@
 
 Findings that back [SKILL.md](SKILL.md). Changes they caused are logged in [CHANGELOG.md](CHANGELOG.md); procedural lessons live in [LEARNINGS.md](LEARNINGS.md); test runs and their evidence in [TESTS.md](TESTS.md); schedule and state in `evergreen.json`. Protocol: [MAINTENANCE.md](MAINTENANCE.md). Setup detail for the user: [references/setup.md](references/setup.md).
 
-Topic: Obsidian-compatible markdown for AI agents: link forms that work in Obsidian, GitHub and VS Code, index and map-of-content practice, the Obsidian CLI and agent integrations, vault layout. Tier `fast`. Last refresh 2026-10-03 (next due in `evergreen.json`).
+Topic: Obsidian-compatible markdown for AI agents: link forms that work in Obsidian, GitHub and VS Code, index and map-of-content practice, the Obsidian CLI and agent integrations, vault layout. Tier `fast`. Last refresh 2026-10-06 (next due in `evergreen.json`).
 
 ## Current understanding
 
 Settled (high confidence, primary sources 2026-09-18):
 
-- Obsidian treats `[[Note]]` and `[Note](Note.md)` as equivalent and documents turning `Use [[Wikilinks]]` off "to improve interoperability"; markdown links must be URL-encoded with forward slashes. GitHub does not render wikilinks (community discussion 73062 still open with no staff reply, re-checked 2026-10-03). So relative markdown links are the only form that works in Obsidian, GitHub and VS Code at once. "Shortest path" link format drops folders on rename when basenames collide (forum bug, January 2026); "relative" avoids it.
+- Obsidian treats `[[Note]]` and `[Note](Note.md)` as equivalent and documents turning `Use [[Wikilinks]]` off "to improve interoperability"; markdown links must be URL-encoded with forward slashes. GitHub does not render wikilinks (community discussion 73062 closed unanswered with no staff reply, re-checked 2026-10-06). So relative markdown links are the only form that works in Obsidian, GitHub and VS Code at once. "Shortest path" link format drops folders on rename when basenames collide (forum bug, January 2026); "relative" avoids it.
 - The official Obsidian CLI shipped in 1.12.4 (2026-02-27), enabled in Settings > General and needing the 1.12.7 or newer installer; it remote-controls a running app (launches it if closed, not headless) and exposes search, read, create, append, links, backlinks, tags, properties, plugins, eval, screenshots. Obsidian's help says it exists so "agentic coding tools" can test and debug.
-- kepano/obsidian-skills (48.6k stars, MIT; six skills, about 375k installs on skills.sh) is the de-facto official agent skill set. Its obsidian-markdown skill says to use wikilinks inside a vault and markdown links only for external URLs, so it assumes a vault-only reader; it does not cover GitHub compatibility or duplicate basenames. This skill takes the opposite rule (relative markdown links, an index per folder) and does not install or depend on obsidian-skills; it is recorded here as the main wikilink-first alternative.
+- kepano/obsidian-skills (49.2k stars, MIT; seven skills since knap on 2026-09-10, about 388k installs on skills.sh) is the de-facto official agent skill set. Its obsidian-markdown skill says to use wikilinks inside a vault and markdown links only for external URLs, so it assumes a vault-only reader; it does not cover GitHub compatibility or duplicate basenames. This skill takes the opposite rule (relative markdown links, an index per folder) and does not install or depend on obsidian-skills; it is recorded here as the main wikilink-first alternative.
 - Obsidian has no AI features on its roadmap (May 2026 plugin platform relaunch; roadmap.md). Its AI posture is "open formats plus skills".
 - MCP access: the Local REST API plugin (2.9k stars) serves MCP itself since v5 (July 2026) at `https://127.0.0.1:27124/mcp/`; the mcp-obsidian bridge (4.4k stars) wraps the same API and has had no release since about May 2026. Claudian (15.4k stars, Obsidian 1.13+) embeds Claude Code and others inside Obsidian.
 - Practice: Karpathy's llm-wiki gist (April 2026) and its implementations (obsidian-mind 4.6k stars, claude-obsidian) converge on agent-maintained index and map-of-content notes, frontmatter with date, status and tags, a lint pass for dead links and orphans, and immutable raw sources.
 - Testing: headless linters exist (bborbe/obsidian-lint, vault-inspector, obsidian-broken-links-cleaner); the shared baseline is: every link resolves, no duplicate basenames, no orphans outside the index, frontmatter parses. No published eval suite for agent-written Obsidian notes was found; this skill's suite is its own.
 - One vault or many (forum thread 1445): split only when two trees have no sensible cross-links, need separate sync or privacy, or one is huge; the cost is lost cross-links, search and graph plus duplicated settings. Repo subfolders opened as vaults work with obsidian-git.
 
-Contested or moving: whether the graph itself helps a reader (no measurement either way; testimony says lint and backlinks help, the picture does not); the CLI's headless story; files outside the vault (1.14.2 Catalyst, 2026-09-15, opens a single outside file in the current window and registers Obsidian in the OS "Open with" menu; 1.14.4 shows its outline and outgoing links; still early access, and links from vault notes to outside files are not documented as followable, so the skill's "link outside the root" warning stands); Obsidian Community capability disclosures for plugins (announced, rolling out).
+Contested or moving: whether the graph itself helps a reader (no measurement either way; testimony says lint and backlinks help, the picture does not); the CLI's headless story; files outside the vault (1.14 public since 2026-10-05: opens a single outside file and registers Obsidian in the OS "Open with" menu, the file's own links resolve from its folder; links from vault notes to outside files are still not documented as followable, so the skill's "link outside the root" warning stands, R-20261006-1); relative links inside a moved note are not updated by Obsidian (forum 4386, R-20261006-2); Obsidian Community capability disclosures for plugins (announced, rolling out).
 
 ## Open questions
 
 - Does any study measure backlinks or graph view improving comprehension of agent-written docs? None found 2026-09-18; re-check.
 - Will the CLI gain a headless mode? Partly answered 2026-09-18 (R-20260918-5): Obsidian Headless is a separate open-beta Sync client for servers and agents, not a headless desktop CLI; the CLI still needs the app. Watch whether Headless gains read and search commands. 2026-10-03: no change found (R-20261003-1); carried forward.
-- When 1.14 reaches the public build, can a vault note's markdown link to a file outside the vault be followed? (R-20261003-1)
+- 1.14 is public (2026-10-05); can a vault note's markdown link to a file outside the vault be followed? The docs cover only links inside the outside file (R-20261006-1). Test by hand on an install.
+- Will Obsidian fix the relative-link-on-move bug (forum 4386)? (R-20261006-2)
 - Does the `obsidian` shim land on PATH on Windows without a terminal restart, and what is its exact executable name (`Obsidian.com`)? Verify on a Windows install once the CLI is enabled.
 
 ## Search plan
@@ -48,15 +49,35 @@ Practice (how people use agents on this goal):
 
 - `"claude code" obsidian vault workflow <year>`; `karpathy llm-wiki obsidian`; `obsidian "map of content" agent <year>`
 - `"keep AI out of" obsidian` (the dissent, for balance)
+- Forum sweep: `site:forum.obsidian.md` for links breaking on move or rename, AI agents writing notes, the CLI; r/ObsidianMD is rarely indexed (2026-10-06), so search the forum first. Old bugs still open are the useful finds.
 
 Testing (what proves the job was done):
 
 - `obsidian lint broken links orphans cli <year>`; `vault linter frontmatter duplicate basenames`
 - Evidence rule for this skill: a `vault_lint.py` call in the trace or a written `INDEX.md`; exit code 0 after the fix
+- `site:code.claude.com plugin eval` (the `claude plugin eval` harness and its grader types)
 
 ## Findings
 
 Newest first. Shape: `### R-YYYYMMDD-n · date · one line`, then `source:`, `track:`, `magnitude:` (major 0.6+ / real 0.3-0.5 / cosmetic under 0.3), `applied:`.
+
+### R-20261006-1 · 2026-10-06 · Subject track: Obsidian 1.14 public (2026-10-05) opens outside markdown files; vault-to-outside links still undocumented
+- source: https://obsidian.md/changelog/2026-10-05-desktop-v1.14.4/, https://obsidian.md/changelog/
+- track: subject
+- magnitude: real 0.3
+- applied: C-20261006-1 (SKILL §Step 2 outside-root line, setup.md "Opening a code repo as a vault"). Links in an outside file resolve from its own folder; the quick switcher is always fuzzy; 1.14 needs the latest installer.
+
+### R-20261006-2 · 2026-10-06 · Practice track (forum sweep): with relative paths, Obsidian does not update the links inside a note that moves
+- source: https://forum.obsidian.md/t/broken-links-in-relative-path-mode-on-move-rename/4386?page=2 (open since 2022, last post 2026-04-02), https://forum.obsidian.md/t/links-break-when-moving-renaming-linked-files/106794
+- track: practice
+- magnitude: real 0.4
+- applied: C-20261006-1 (SKILL §Step 2 "lint again after moves", setup.md warning and the Consistent Attachments and Links plugin, self-test case 12d). The forum sweep found no August to October 2026 threads on agents, the CLI or map-of-content practice; r/ObsidianMD and Discord were not indexed.
+
+### R-20261006-3 · 2026-10-06 · Tooling and testing tracks: CLI `unresolved`, `orphans`, `deadends`; `claude plugin eval`; Local REST API 5.4.0
+- source: https://obsidian.md/help/cli, https://code.claude.com/docs/en/plugin-evals.md, https://github.com/coddingtonbear/obsidian-local-rest-api/releases, https://github.com/kepano/obsidian-skills/commits/main, https://registry.modelcontextprotocol.io/v0/servers?search=obsidian
+- track: tooling, testing
+- magnitude: real 0.35
+- applied: C-20261006-1 (setup.md CLI block: the three commands as a cross-check against Obsidian's own resolver, "follow the prompt to register"; Local REST API 5.4.0 blocks `.obsidian/` by default; obsidian-skills added knap, 49k stars). `claude plugin eval` (Claude Code 2.1.269+) runs cases from a plugin-root `evals/` folder with free `tool_used` and `file_exists` graders; this unit's action cases map onto it directly. Not adopted yet: the current harness is `evergreen.py worth`; mirror the cases when the next test run is due. New MCP or in-app agent tools (Qlaude, Vault Companion for Claude, obsidian-tc) are all wikilink-first. GitHub discussion 73062 is now closed unanswered. The Agent Skills description cap is still 1,024 characters (this one is about 990).
 
 ### R-20261003-3 · 2026-10-03 · Tooling, practice and testing tracks: more wikilink-first vault linters and agent bridges, nothing that does this skill's job for relative links
 - source: https://community.obsidian.md/plugins/cairn-vault-linter, https://community.obsidian.md/plugins/vault-plus, https://skillselion.com/skills/agricidaniel/claude-obsidian/wiki-lint, https://skillselion.com/skills/ar9av/obsidian-wiki/wiki-lint, https://community.obsidian.md/plugins/blackglass, https://skillselion.com/skills/kepano/obsidian-skills/obsidian-cli
