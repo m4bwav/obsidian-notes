@@ -78,8 +78,12 @@ def main():
     check("evals.json parses and has cases", isinstance(cases, list) and len(cases) > 0)
 
     for script in ("vault_lint.py", "test_vault_lint.py"):
-        src = (SKILL_DIR / "scripts" / script).read_bytes()
-        check(f"{script} uses LF line endings", b"\r\n" not in src)
+        path = SKILL_DIR / "scripts" / script
+        src = path.read_bytes()
+        # The index (what ships) must be LF; a Windows checkout with core.autocrlf shows CRLF on disk, which is fine.
+        eol = subprocess.run(["git", "ls-files", "--eol", str(path)], capture_output=True, text=True, cwd=ROOT).stdout.split()
+        committed_lf = eol[0] in ("i/lf", "i/none") if eol else b"\r\n" not in src
+        check(f"{script} is committed with LF line endings", committed_lf, eol[:1])
         imports = set(re.findall(rb"^(?:import|from) (\w+)", src, re.M))
         third_party = {i.decode() for i in imports} - set(sys.stdlib_module_names if hasattr(sys, "stdlib_module_names") else []) - {"__future__"}
         check(f"{script} imports the standard library only", not third_party or not hasattr(sys, "stdlib_module_names"), third_party)
