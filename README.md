@@ -1,5 +1,7 @@
 # obsidian-notes
 
+![A polished black obsidian slab lying on a scholar's wooden desk, glowing violet threads linking dozens of floating parchment notes into a web above it](https://raw.githubusercontent.com/m4bwav/obsidian-notes/master/.github/images/banner.jpg)
+
 An Agent Skill that makes AI-written markdown navigable for people in Obsidian and for later agents, while it still renders on GitHub and in VS Code: an index per folder, explicit `Related:` links, relative markdown links instead of wikilinks, a lint that finds broken, mis-cased and ambiguous links, orphans, duplicate basenames and malformed frontmatter, one command to set a folder up as a vault, and the official Obsidian CLI when it is enabled. Built 2026-09-18 from the research in [skills/obsidian-notes/RESEARCH.md](skills/obsidian-notes/RESEARCH.md).
 
 The rule it enforces, and why: Obsidian resolves `[Note](path/Note.md)` and `[[Note]]` identically and can be set to write markdown links; GitHub, VS Code and most agents render only markdown links; and relative links are path-based, so two files with the same name never collide. Wikilinks are the exception, for a vault nobody reads anywhere else.
