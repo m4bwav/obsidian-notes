@@ -8,6 +8,11 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261006-1 · 2026-10-06 · evergreen-tester (fresh context, one run, skill read from the working copy of C-20261006-1) · DESKTOP native Windows · 1/1
+- action-1 · action · pass: the text report ran three times (before, `--fix-index`, after hand edits); no `--json`. The script's purpose clauses were in place and the runner rewrote them as "when to read it" lines, as Step 2 now asks. `check_vault.py --task index` exits 0. The reply gave before and after counts and left nope.md, the ambiguous `[[Beta]]` and the duplicate basename for the user. 12 tool calls.
+- Script suites the same day: `test_vault_lint.py` (cases 12a to 12d added) and the new `tests/test_repo.py` pass.
+- led to: none (C-20261006-1 kept)
+
 ### T-20261001-2 · 2026-10-01 · evergreen.py worth --ab --arm with --append (claude -p, sonnet, the trimmed SKILL.md of C-20261001-2) · DESKTOP native Windows · with 10/10, without 8/10 (baseline from T-20261001-1)
 - Isolation: `--setting-sources project --no-session-persistence`; the owner's global CLAUDE.md loads in both arms (fair, not blind). The without arm is T-20261001-1's ten runs, unchanged because only the skill changed.
 - action-3 5/5 with, outcome-2 5/5 with. Delta +20 points, inside the 25-point margin; cost x0.99 (was x1.24), turns x1.15 (was x1.33), time x0.87. Verdict UNPROVEN (no gain beyond noise at the same cost). Mean with-arm run $0.25, was $0.31. Results: Ai/skill-worth-study/runs/obsidian-notes/trimmed-2026-10-01.

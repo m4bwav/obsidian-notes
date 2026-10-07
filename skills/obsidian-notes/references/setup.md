@@ -8,7 +8,7 @@ Settings > Files and links:
 
 - `Use [[Wikilinks]]`: off. Obsidian then writes `[Note](path/Note.md)` when you link or drag a file, and still resolves existing wikilinks.
 - "New link format": Relative path to file. "Shortest path when possible" drops the folder and breaks on rename when two files share a name (forum bug, January 2026).
-- "Automatically update internal links": on.
+- "Automatically update internal links": on. It updates links that point to a moved note, but not the relative links inside the note that moved, so those break (forum thread 4386, open since 2022, still reported in 2026). Run `vault_lint.py` after moving notes; in the app, the Consistent Attachments and Links community plugin fixes them.
 - "Excluded files": build and cache folders (`Library/`, `Temp/`, `obj/`, `Logs/`, `Builds/`, `node_modules/`). Obsidian hides them in search, graph view and unlinked mentions, and only deprioritizes them in the quick switcher and link suggestions.
 - "Show all file types" (older versions: "Detect all file extensions"; app.json `showUnsupportedFiles`): off, so a Unity or Node tree does not flood the file list.
 
@@ -20,7 +20,7 @@ Commit `app.json`, `appearance.json`, `core-plugins.json`, `community-plugins.js
 
 ## Opening a code repo as a vault
 
-"Open folder as vault" on the repo root gives one graph across `README.md`, `docs/`, `ai-docs/`, `CODEMAP.md`. Add the build folders to Excluded files first (above). Opening only `ai-docs/` as the vault is simpler but loses links to `docs/` and the README; a vault cannot span two sibling folders without their parent. Obsidian's roadmap lists "open individual markdown files outside vaults" as active work (2026), which may loosen this later.
+"Open folder as vault" on the repo root gives one graph across `README.md`, `docs/`, `ai-docs/`, `CODEMAP.md`. Add the build folders to Excluded files first (above). Opening only `ai-docs/` as the vault is simpler but loses links to `docs/` and the README; a vault cannot span two sibling folders without their parent. Obsidian 1.14 (public 2026-10-05) opens single markdown files from outside any vault, with that file's own links resolved from its folder; whether a vault note's link to an outside file can be followed is not documented, so the lint still warns on it.
 
 ## One vault or several
 
@@ -30,7 +30,7 @@ For a set of separate repositories that should share one graph, either open thei
 
 ## The official Obsidian CLI (since 1.12.4, February 2026)
 
-Needs the 1.12.7 or newer installer (Settings > General shows the installer version; if the toggle was on before an update, turn it off and on again). Enable: Settings > General > Command line interface, then restart the terminal. Windows adds `Obsidian.com` to PATH from the install folder; macOS symlinks `/usr/local/bin/obsidian`; Linux copies a binary to `~/.local/bin/obsidian`. The CLI remote-controls a running Obsidian and launches it when closed; it is not headless. Obsidian Headless (open beta, `npm install -g obsidian-headless`, command `ob`, Node 22+) is a separate Sync client that runs without the app but only syncs a vault; use `vault_lint.py` for headless checks.
+Needs the 1.12.7 or newer installer (Settings > General shows the installer version; if the toggle was on before an update, turn it off and on again). Enable: Settings > General > Command line interface, follow the prompt to register it, then restart the terminal. Windows adds `Obsidian.com` to PATH from the install folder; macOS symlinks `/usr/local/bin/obsidian`; Linux copies a binary to `~/.local/bin/obsidian`. The CLI remote-controls a running Obsidian and launches it when closed; it is not headless. Obsidian Headless (open beta, `npm install -g obsidian-headless`, command `ob`, Node 22+) is a separate Sync client that runs without the app but only syncs a vault; use `vault_lint.py` for headless checks.
 
 ```
 obsidian search query=<text> path=<folder> limit=<n>
@@ -41,18 +41,22 @@ obsidian links file=<name> [total]
 obsidian backlinks file=<name> [counts] [format=json|tsv|csv]
 obsidian tags [file=<name>] [counts] [sort=count]
 obsidian property:set name=<n> value=<v> type=<t> file=<name>
+obsidian unresolved [counts] [verbose] [format=json|tsv|csv]   # links Obsidian itself cannot resolve
+obsidian orphans [total]                # no inbound links
+obsidian deadends [total]               # no outbound links
+obsidian vaults [verbose]
 obsidian vault=<name|id> <command>      # target a vault; must come first
 ```
 
-Use it for questions Obsidian answers better than a script (its own link resolution, backlinks, tag counts, search across a live vault). Use `vault_lint.py` when Obsidian is closed, in CI, or on a folder that is not a vault.
+Use it for questions Obsidian answers better than a script (its own link resolution, backlinks, tag counts, search across a live vault). `unresolved` and `orphans` cross-check `vault_lint.py` against Obsidian's own resolver on a live vault. Use `vault_lint.py` when Obsidian is closed, in CI, or on a folder that is not a vault.
 
 ## Agent integrations, ranked by real use (September 2026)
 
 | Tool | What it is | When it is worth it |
 |---|---|---|
-| kepano/obsidian-skills (48k stars; obsidian-markdown, obsidian-cli, obsidian-bases, json-canvas, defuddle) | Official-author Agent Skills teaching the file grammars (Bases, JSON Canvas, callouts) | Not used by this skill: its obsidian-markdown skill prefers wikilinks and assumes a vault-only reader, the opposite of the relative-link rule here. Listed so you know it exists; nothing here depends on it |
+| kepano/obsidian-skills (49k stars; obsidian-markdown, obsidian-cli, obsidian-bases, json-canvas, defuddle, knap and others) | Official-author Agent Skills teaching the file grammars (Bases, JSON Canvas, callouts) | Not used by this skill: its obsidian-markdown skill prefers wikilinks and assumes a vault-only reader, the opposite of the relative-link rule here. Listed so you know it exists; nothing here depends on it |
 | Obsidian CLI | Built into the app | Any live-vault question; free |
-| Local REST API plugin (2.9k stars, v5 serves MCP at `https://127.0.0.1:27124/mcp/`) | HTTP and MCP access to a running vault | A long-running agent that edits the vault while Obsidian is open; the older mcp-obsidian bridge (4.4k stars, unmaintained since May 2026) wraps the same API |
+| Local REST API plugin (2.9k stars, v5 serves MCP at `https://127.0.0.1:27124/mcp/`; 5.4.0 blocks `.obsidian/` by default, so write vault settings with `--vault-init` on disk) | HTTP and MCP access to a running vault | A long-running agent that edits the vault while Obsidian is open; the older mcp-obsidian bridge (4.4k stars, unmaintained since May 2026) wraps the same API |
 | Claudian (15k stars) | Claude Code, Codex and others as a sidebar inside Obsidian, vault as cwd | Working on notes inside Obsidian rather than from a terminal; desktop only, Obsidian 1.13+ |
 | Smart Connections (5k stars), Copilot for Obsidian (7k stars) | In-app related-note suggestions and chat | Human reading aid, not an agent tool |
 | Karpathy "llm-wiki" pattern, breferrari/obsidian-mind, AgriciDaniel/claude-obsidian | Agent-maintained wiki with index notes, frontmatter, lint for dead links and orphans | The practice this skill follows; read for ideas, no need to install |

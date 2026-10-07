@@ -20,5 +20,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: self-test
         run: python skills/obsidian-notes/scripts/test_vault_lint.py
+      - name: repository and manifest checks
+        run: python tests/test_repo.py
       - name: the repo's own markdown passes its lint
         run: python skills/obsidian-notes/scripts/vault_lint.py . --exclude fixtures

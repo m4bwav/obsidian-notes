@@ -4,7 +4,8 @@ Read [README.md](README.md) first. The skill is [skills/obsidian-notes/SKILL.md]
 
 - Evergreen unit in pointer mode: before editing the skill read `skills/obsidian-notes/evergreen.json`; if `next_due` has passed or `contradiction` is set, say so and refresh after the task. Every edit to SKILL.md gets a CHANGELOG entry with its reason and a re-run of `evals/evals.json` (evergreen-test).
 - `scripts/vault_lint.py` stays stdlib-only and cross-platform (pathlib, UTF-8, LF). Test it on the fixture under `skills/obsidian-notes/evals/fixtures/` before committing.
-- Links in this repo are relative markdown links; no wikilinks; every folder of markdown has an index. The repo must pass its own lint: `python skills/obsidian-notes/scripts/vault_lint.py . --exclude fixtures` from the repo root reports no errors and no warnings (the fixture under `evals/fixtures/` is deliberately broken and is excluded). `python skills/obsidian-notes/scripts/test_vault_lint.py` must pass.
+- Links in this repo are relative markdown links; no wikilinks; every folder of markdown has an index. The repo must pass its own lint: `python skills/obsidian-notes/scripts/vault_lint.py . --exclude fixtures` from the repo root reports no errors and no warnings (the fixture under `evals/fixtures/` is deliberately broken and is excluded). `python skills/obsidian-notes/scripts/test_vault_lint.py` and `python tests/test_repo.py` must pass.
+- Master is live: the Claude plugin directory listing has auto-publish on and picks master up on its scheduled check. Bump the version in both `plugin.json` files (root and `.claude-plugin/`) and add a CHANGELOG entry in the same change; `tests/test_repo.py` enforces it.
 - No AI attribution in commits or files.
 
 ## everlast (session knowledge, load on demand)

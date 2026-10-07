@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261006-1 · 2026-10-06 · Faster lint, purpose clauses from `--fix-index`, capped `--json`, the research of 2026-10-06; version 0.3.0
+- because: user request (obvious wins, token and time savings, an evergreen research pass with a forum sweep, tests); R-20261006-1, R-20261006-2, R-20261006-3; C-20260918-6 (the purpose clause it left for the script)
+- files: scripts/vault_lint.py (one tree walk instead of two; folder listings and resolved paths cached per scan; a link from a file to itself no longer rescues it from the orphan list; `--fix-index` lines end in `: <purpose>` from frontmatter `description` or `summary`, else the first prose sentence, links reduced to labels, capped at 120 characters; the generated index's intro no longer claims every document links back; `--json` honours `--max` and records cut lists under `truncated`), scripts/test_vault_lint.py (cases 12a to 12d), ../../tests/test_repo.py (new: manifests agree, directory fields, description cap, body budget, changelog has the version, stdlib only, LF), SKILL.md §Step 2 (prefer the capped text report to `--json`; the purpose clause; outside-root wording for 1.14; lint again after moving notes in Obsidian), references/setup.md (move warning, 1.14 outside files, CLI `unresolved`/`orphans`/`deadends` and the register prompt, Local REST API 5.4.0, obsidian-skills count), RESEARCH.md, ../../.github/workflows/tests.yml (runs test_repo.py), both plugin.json files (0.3.0)
+- Measured on a 3,124-file tree (the owner's Ai folder): 5.2 s to 2.7 s warm with identical findings; `--json` 586 KB, `--json --max 10` 6.6 KB. SKILL.md had told agents to use `--json` on large folders, which would have read about 150k tokens. Description unchanged, so triggering is unchanged.
+
 ### C-20261005-1 · 2026-10-05 · Root plugin.json for GitHub Copilot CLI and awesome-copilot; version 0.2.1
 - because: user request (list the plugin in github/awesome-copilot, whose intake gates never read `.claude-plugin/`)
 - files: ../../plugin.json (new), .claude-plugin/plugin.json (0.2.1)
