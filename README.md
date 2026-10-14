@@ -20,6 +20,7 @@ The skill is an evergreen unit under the [evergreen protocol](https://github.com
 python skills/obsidian-notes/scripts/vault_lint.py <folder>                    # report (exit 1 on errors), 15 items per list
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --json --max 50    # machine-readable; without --max it lists everything
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --fix-index        # write missing INDEX.md files and link them from above
+python skills/obsidian-notes/scripts/vault_lint.py <folder> --root-index       # write only <folder>/INDEX.md, one line per top folder
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --to-markdown-links
 python skills/obsidian-notes/scripts/vault_lint.py <folder> --vault-init --ignore Library Temp   # only folders that exist are auto-detected; --ignore names are always written
 python skills/obsidian-notes/scripts/vault_lint.py --probe                     # is the obsidian CLI on PATH
@@ -28,6 +29,8 @@ python tests/test_repo.py                                                      #
 ```
 
 Standard-library Python 3.9 or newer (`python` on Windows, `python3` on macOS and Linux); nothing to pip install. Obsidian does not need to be installed or running for the lint.
+
+Safety on big folders: the walk skips `AppData`, `Application Data` and `Local Settings` unless you pass `--include-appdata`; on a user profile or a tree of more than 1,000 markdown files `--fix-index` and `--to-markdown-links` write nothing until you add `--yes`; files the script cannot read are skipped and listed instead of stopping the run.
 
 ## Install
 
