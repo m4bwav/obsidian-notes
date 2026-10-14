@@ -19,6 +19,10 @@ Read `evergreen.json` next to this file. If `contradiction` is set or today is o
 
 The unit of navigation is the vault root (a `.obsidian/` folder), else the folder the user named, else the repo's docs root. Unless the user says the notes are read only in Obsidian, assume GitHub and VS Code readers too: relative markdown links serve all three.
 
+If the named root is a home or profile folder (`C:\Users\<name>`, `~`, a folder holding `NTUSER.DAT`) or a whole drive, stop before any write and ask which subfolder to use; offer "one INDEX.md at the root only" (`VL <root> --root-index`) as an option. The script skips `AppData`, `Application Data` and `Local Settings`; pass `--include-appdata` only after the user approves it. On a profile or a tree over 1,000 markdown files `--fix-index` and `--to-markdown-links` refuse (exit 3, saying how many files they would touch) until `--yes` is added, which needs the user's go-ahead too.
+
+**Remote or cloud sessions** (Claude Desktop with a linked computer, Cowork): the script is in your sandbox, not on the user's machine. Copy `vault_lint.py` to a scratch folder on the device (`%TEMP%\obsidian-notes\` or `/tmp/obsidian-notes/`, never the user's folders), check its sha256 against your copy, and run it there. Device calls time out at about 60 s, so on a large tree start it in the background with output to a file (`Start-Process -Wait -RedirectStandardOutput`, or `nohup ... > out.txt &`) and poll the file.
+
 ## Step 2: lint, then act on the report (the core action, leaves evidence)
 
 Run `VL <root>` (`--exclude NAME ...` for more folders to skip). The text report gives every count and the first 15 items per list (`--max N`); prefer it to `--json`, which lists everything unless `--max` is given (586 KB on a 3,000-file tree). The report must appear in the trace before you say anything about the state of the notes. Then, per finding:
@@ -26,12 +30,13 @@ Run `VL <root>` (`--exclude NAME ...` for more folders to skip). The text report
 - Broken markdown link (missing file, a space in the target, a case that differs from the file on disk, which is a 404 on GitHub and Linux): fix the target when the right one is clear; otherwise leave the link and name it for the user. Never invent the missing file.
 - Ambiguous or broken wikilink: `VL <root> --to-markdown-links` rewrites every wikilink that resolves to exactly one file and leaves ambiguous ones alone; name each ambiguous link and its candidates for the user instead of guessing, or qualify it (`[[notes/Beta]]`) only when the context makes the target certain.
 - Duplicate basenames: rename when both files are yours; never in a vault spanning a public clone and a private fork (markdown links are path-based and unaffected).
-- Folder without an index: `VL <root> --fix-index` writes `INDEX.md` linking each file by its H1 title with a purpose clause (frontmatter `description`, else the first sentence of prose) and links it from the nearest index above, so the new index is not itself an orphan. Rewrite a clause that does not say when to read the file. Never overwrite an existing index; edit it.
+- Folder without an index: `VL <root> --fix-index` writes `INDEX.md` linking each file by its H1 title with a purpose clause (frontmatter `description`, else the first sentence of prose) and links it from the nearest index above, so the new index is not itself an orphan. Rewrite a clause that does not say when to read the file. Never overwrite an existing index; edit it. When only an entry point is wanted, `VL <root> --root-index [--group Claude/Projects Documents]` writes `<root>/INDEX.md` alone: each top folder (or each child of a group) linked by its index's title, folders without an index listed unlinked with counts.
+- Unreadable files and folders (permission denied, locked): skipped and listed as a warning; tell the user, do not retry with elevation.
 - Orphan: link it from its folder's index or the document it belongs to; say which orphans may be drafts to delete.
 - Frontmatter error: fix the YAML (Obsidian shows invalid frontmatter as no properties). Link outside the root: a warning; Obsidian 1.14 opens single files from outside a vault, but following a vault link to one is undocumented.
 - After notes were moved inside Obsidian, lint again: with relative paths Obsidian updates links to a moved note but not the links inside it (forum thread 4386, open since 2022).
 
-The fix flags combine in one call (`VL <root> --fix-index --to-markdown-links`) and print the after-report themselves, so that is the after count; run `VL <root>` again only after hand edits. Exit 0 means no error-class findings (exit 1 is normal while a broken or ambiguous link is left for the user; exit 2: the root does not exist). Report the before and after counts.
+The fix flags combine in one call (`VL <root> --fix-index --to-markdown-links`) and print the after-report themselves, so that is the after count; run `VL <root>` again only after hand edits. Exit 0 means no error-class findings (exit 1 is normal while a broken or ambiguous link is left for the user; exit 2: the root does not exist; exit 3: a fix refused on a profile or big tree, nothing written). Report the before and after counts.
 
 ## Step 3: write markdown that links (when creating or editing notes)
 

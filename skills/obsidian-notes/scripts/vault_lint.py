@@ -5,6 +5,7 @@ Python 3.9 or newer, Windows, macOS and Linux.
 
   python vault_lint.py <root> [--json] [--exclude NAME ...] [--max N]   # --max: 15 in text; --json lists all unless given
   python vault_lint.py <root> --fix-index          # write INDEX.md (title + purpose clause per file) where a folder has none, link it from the index above
+  python vault_lint.py <root> --root-index [--group Claude/Projects Documents]   # write only <root>/INDEX.md: one line per top folder
   python vault_lint.py <root> --to-markdown-links  # rewrite [[wikilinks]] that resolve to one file as relative markdown links
   python vault_lint.py <root> --vault-init [--ignore FOLDER ...]   # .obsidian/app.json (markdown links, relative paths) + .gitignore lines
   python vault_lint.py --probe                     # is the `obsidian` CLI on PATH (or its Windows shim beside the app), which vaults exist
@@ -14,23 +15,36 @@ or a target whose case differs from the file on disk, which is a 404 on GitHub a
 Linux), broken or ambiguous wikilinks, frontmatter that is opened but never closed,
 tab-indented, or has a line without a key (a quick check, not a YAML parser).
 Warnings: orphans (no inbound link), folders without an index, duplicate basenames,
-links that leave the root, wikilink count (they do not render on GitHub).
+links that leave the root, unreadable files and folders (permission denied: skipped,
+listed, never fatal), wikilink count (they do not render on GitHub).
 
 An index is README.md, INDEX.md, _index.md, MOC.md or SKILL.md (any case), or a file
 named after its folder. Links from index files are what cover a folder: a folder whose
 every file is linked from some index anywhere in the tree is not reported. Only an
-index at the root is exempt from the orphan check. The walk skips hidden folders and
+index at the root is exempt from the orphan check. The walk skips hidden folders
+(a leading dot, or hidden + system on Windows, such as the My Documents junction),
 common build folders (node_modules, __pycache__, venv, Library, Temp, obj, Logs,
-Builds, bin, dist, build); --exclude adds folder names, matched at any depth.
+Builds, bin, dist, build) and Windows profile data (AppData, Application Data, Local
+Settings; --include-appdata walks them, only with the user's approval); --exclude adds
+folder names. All skips match at any depth.
+
+Home-folder guard: when the root is a user profile (it holds NTUSER.DAT, or it is
+USERPROFILE or HOME) or the tree holds more than 1,000 markdown files, --fix-index and
+--to-markdown-links write nothing unless --yes is given; they print how many files they
+would touch and exit 3. The lint itself still runs. --root-index writes one file and
+never overwrites an existing root INDEX.md, so it is the safe choice for a big tree.
+Exit codes: 0 clean, 1 errors found, 2 bad arguments or missing root, 3 a fix refused.
 Reference-style links count; links inside code fences (any length, also inside
 blockquotes), inline code, HTML comments and frontmatter are ignored, except that
 wikilinks in frontmatter count as links (Obsidian treats them as properties).
 """
 import argparse
+import datetime
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -38,6 +52,10 @@ from urllib.parse import quote, unquote
 
 SKIP_DIRS = {".git", ".obsidian", ".trash", "node_modules", "__pycache__", ".venv", "venv",
              "Library", "Temp", "obj", "Logs", "Builds", "bin", "dist", "build", ".idea", ".vs"}
+# Windows profile data: thousands of tool caches and app files nobody browses as notes. Skipped unless
+# --include-appdata, and that flag needs the user's approval (a 2026-10-13 run on a profile walked them).
+APPDATA_DIRS = {"AppData", "Application Data", "Local Settings"}
+BIG_TREE = 1000  # markdown files; above this the fix flags need --yes
 INDEX_NAMES = ("readme.md", "index.md", "_index.md", "moc.md", "skill.md")
 FENCE_OPEN_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
 FENCE_CLOSE_RE = re.compile(r"^\s{0,3}(`{3,}|~{3,})\s*$")
@@ -289,12 +307,30 @@ def resolve_wikilink(name, embed, by_base, by_name_any):
 
 # ---------- walking ----------
 
-def walk(root, excludes):
-    """One pass over the tree: (markdown files in sorted order, every file)."""
-    skip = SKIP_DIRS | set(excludes)
+def walk(root, excludes, include_appdata=False, unreadable=None):
+    """One pass over the tree: (markdown files in sorted order, every file). Folders that cannot be
+    listed are appended to `unreadable` instead of stopping the walk."""
+    skip = SKIP_DIRS | set(excludes) | (set() if include_appdata else APPDATA_DIRS)
     md, every = [], []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = sorted(d for d in dirnames if d not in skip and not d.startswith("."))
+
+    def onerror(e):
+        if unreadable is not None:
+            unreadable.append((Path(e.filename or ""), e.strerror or str(e)))
+
+    def os_owned(dirpath, d):
+        """Windows marks its own folders hidden + system: the legacy profile junctions (My Documents, Cookies,
+        NetHood), which deny listing by design, and System Volume Information. Skipped like dot folders."""
+        if os.name != "nt":
+            return False
+        try:
+            attrs = os.lstat(os.path.join(dirpath, d)).st_file_attributes
+        except (OSError, AttributeError):
+            return False
+        hs = stat.FILE_ATTRIBUTE_HIDDEN | stat.FILE_ATTRIBUTE_SYSTEM
+        return attrs & hs == hs
+
+    for dirpath, dirnames, filenames in os.walk(root, onerror=onerror):
+        dirnames[:] = sorted(d for d in dirnames if d not in skip and not d.startswith(".") and not os_owned(dirpath, d))
         for f in sorted(filenames):
             p = Path(dirpath) / f
             every.append(p)
@@ -324,9 +360,10 @@ def under(resolved, root):
 
 # ---------- scan ----------
 
-def scan(root, excludes):
+def scan(root, excludes, include_appdata=False):
     root = Path(root).resolve()
-    files, every = walk(root, excludes)
+    unreadable = []
+    files, every = walk(root, excludes, include_appdata, unreadable)
     by_base, by_name_any = {}, {}
     for p in files:
         by_base.setdefault(p.stem.lower(), []).append(p)
@@ -353,6 +390,7 @@ def scan(root, excludes):
     from_index = set()
     f = {"broken_md_links": [], "broken_wikilinks": [], "ambiguous_wikilinks": [], "frontmatter_errors": [],
          "duplicate_basenames": [], "orphans": [], "folders_without_index": [], "links_outside_root": [],
+         "unreadable_files": [{"file": rel(p, root), "error": err} for p, err in unreadable],
          "wikilinks": 0, "md_links": 0, "files": len(files)}
     texts, boms = {}, {}
 
@@ -401,7 +439,13 @@ def scan(root, excludes):
             credit(matches[0], p)
 
     for p in files:
-        text, bom = read(p)
+        try:
+            text, bom = read(p)
+        except OSError as e:
+            # One locked or permission-denied file must not end the lint (a 2026-10-13 run on a profile died
+            # on one). It still exists, so links to it resolve; its own links are unknown.
+            f["unreadable_files"].append({"file": rel(p, root), "error": e.strerror or str(e)})
+            text, bom = "", False
         texts[p], boms[p] = text, bom
         err = check_frontmatter(text)
         if err:
@@ -434,7 +478,7 @@ def scan(root, excludes):
         if index_in(folder, names_of) is None and not covered:
             f["folders_without_index"].append(rel(folder, root) or ".")
     f["_root"], f["_texts"], f["_boms"], f["_files"], f["_folders"] = root, texts, boms, files, folders
-    f["_by_base"], f["_by_name_any"] = by_base, by_name_any
+    f["_by_base"], f["_by_name_any"], f["_include_appdata"] = by_base, by_name_any, include_appdata
     return f
 
 
@@ -450,7 +494,8 @@ def report(f, max_items):
     print(f"  errors {errs}: broken md links {len(f['broken_md_links'])}, broken wikilinks {len(f['broken_wikilinks'])}, "
           f"ambiguous wikilinks {len(f['ambiguous_wikilinks'])}, frontmatter {len(f['frontmatter_errors'])}")
     print(f"  warnings: orphans {len(f['orphans'])}, folders without index {len(f['folders_without_index'])}, "
-          f"duplicate basenames {len(f['duplicate_basenames'])}, links outside root {len(f['links_outside_root'])}")
+          f"duplicate basenames {len(f['duplicate_basenames'])}, links outside root {len(f['links_outside_root'])}, "
+          f"unreadable files {len(f['unreadable_files'])}")
 
     def show(label, items, fmt):
         if not items:
@@ -469,6 +514,7 @@ def report(f, max_items):
     show("folders without an index", f["folders_without_index"], lambda i: i)
     show("orphans (no inbound link)", f["orphans"], lambda i: i)
     show("links outside the root (Obsidian cannot follow them from a vault)", f["links_outside_root"], lambda i: f"{i['file']} -> {i['target']}")
+    show("unreadable files and folders (skipped)", f["unreadable_files"], lambda i: f"{i['file']}: {i['error']}")
     if f["wikilinks"]:
         print("  note: wikilinks do not render on GitHub or in VS Code; --to-markdown-links converts them")
     return errs
@@ -524,7 +570,10 @@ def fix_index(f):
                 break
             idx = index_in(anc)
             if idx is not None:
-                txt, bom = read(idx)
+                try:
+                    txt, bom = read(idx)
+                except OSError:
+                    break
                 if "everlast.py index" in txt:
                     break
                 have = {unquote(link_target(m)).rstrip("/") for m in MD_LINK_RE.finditer(prose_only(txt))}
@@ -541,7 +590,8 @@ def fix_index(f):
     return written
 
 
-def to_markdown_links(f):
+def to_markdown_links(f, dry=False):
+    """Rewrite wikilinks; with dry=True only list the files that would change."""
     root = f["_root"]
     rewritten = []
     for p in f["_files"]:
@@ -563,9 +613,103 @@ def to_markdown_links(f):
 
         new = "".join(WIKI_RE.sub(sub, c) if prose else c for c, prose in split_prose(text))
         if new != text:
-            write(p, new, f["_boms"][p])
+            if not dry:
+                write(p, new, f["_boms"][p])
             rewritten.append(rel(p, root))
     return rewritten
+
+
+def root_index(f, groups):
+    """Write <root>/INDEX.md only: one line per top-level folder that holds markdown (or per child of a
+    --group folder such as Claude/Projects), linking the folder's own index by its H1 title; folders with
+    markdown but no index are listed unlinked with their counts. Never overwrites a root INDEX.md.
+    Returns the written path, or None when one exists."""
+    root = f["_root"]
+    out = root / "INDEX.md"
+    if any(n.lower() == "index.md" for n in (names_in(root) or ())):
+        return None
+    counts = {}
+    for p in f["_files"]:
+        parts = p.relative_to(root).parts[:-1]
+        for i in range(1, len(parts) + 1):
+            counts[parts[:i]] = counts.get(parts[:i], 0) + 1
+    groups = [tuple(x for x in g.replace("\\", "/").split("/") if x) for g in groups]
+    groups = [g for g in groups if g in counts]
+
+    def expand(k):
+        """A folder above a group stands for its other children; a group is listed in its own section."""
+        if k in groups:
+            return []
+        if any(g[:len(k)] == k for g in groups):
+            return [x for c in sorted(c for c in counts if len(c) == len(k) + 1 and c[:len(k)] == k) for x in expand(c)]
+        return [k]
+
+    def index_through(k):
+        """The folder's index, or the index of its only markdown subfolder when it holds no markdown itself
+        (Documents/Everlast -> Documents/Everlast/vault/README.md)."""
+        while True:
+            idx = index_in(root.joinpath(*k))
+            if idx is not None:
+                return idx
+            kids = [c for c in counts if len(c) == len(k) + 1 and c[:len(k)] == k]
+            if len(kids) != 1 or counts[kids[0]] != counts[k]:
+                return None
+            k = kids[0]
+
+    sections = [("/".join(g), sorted(c for c in counts if len(c) == len(g) + 1 and c[:len(g)] == g)) for g in groups]
+    rest = [x for k in sorted(c for c in counts if len(c) == 1) for x in expand(k)]
+    if rest:
+        sections.append(("Other folders" if groups else "Folders", rest))
+    name = root.name or posix(root)
+    title = f"{name} index"
+    left_out = "Hidden and build folders are" if f["_include_appdata"] else "Hidden folders, build folders and AppData are"
+    lines = ["---", "title: " + (json.dumps(title) if re.search(r"[:#\[\]{}]", title) else title),
+             f"date: {datetime.date.today().isoformat()}", "tags: [index, moc]", "---", "",
+             f"# {title}", "",
+             "Entry point for the markdown under this folder: one line per folder, linking its index by title. "
+             f"Folders listed without a link have no index yet; counts are markdown files. {left_out} left out.", ""]
+    top_files = sorted(p for p in f["_files"] if p.parent == root and p.name.lower() not in INDEX_NAMES)
+    if top_files:
+        lines += ["## Files at the root", ""]
+        lines += [f"- [{title_of(p, f['_texts'].get(p, ''))}]({quote(p.name)})" for p in top_files] + [""]
+    for heading, folders in sections:
+        linked, bare = [], []
+        for k in folders:
+            idx = index_through(k)
+            if idx is None:
+                bare.append(k)
+                continue
+            text = f["_texts"].get(idx, "")
+            clause = purpose_of(text)
+            linked.append((k, f"- [{title_of(idx, text)}]({quote(posix(idx.relative_to(root)))})"
+                              + (f": {clause}" if clause else "") + f" ({counts[k]} file{'s' if counts[k] != 1 else ''})"))
+        if not (linked or bare):
+            continue
+        lines += [f"## {heading}", ""]
+        lines += [line for k, line in sorted(linked, key=lambda x: (-counts[x[0]], x[0]))]
+        if bare:
+            bare.sort(key=lambda k: (-counts[k], k))
+            lines.append("- No index yet: " + ", ".join(f"`{'/'.join(k)}` ({counts[k]})" for k in bare))
+        lines.append("")
+    write(out, "\n".join(lines).rstrip("\n") + "\n")
+    return out
+
+
+def home_reason(root, n_files):
+    """Why a tree is too big or too personal for a bulk fix, or None."""
+    root = Path(root).resolve()
+    if (root / "NTUSER.DAT").exists():
+        return "the root is a Windows user profile (it holds NTUSER.DAT)"
+    for var in ("USERPROFILE", "HOME"):
+        v = os.environ.get(var)
+        try:
+            if v and Path(v).resolve() == root:
+                return f"the root is the home folder (${var})"
+        except OSError:
+            pass
+    if n_files > BIG_TREE:
+        return f"the tree holds {n_files} markdown files (over {BIG_TREE})"
+    return None
 
 
 def vault_init(root, ignore):
@@ -624,8 +768,9 @@ def probe():
     ver, vaults = None, None
     if run_as:
         try:
-            ver = subprocess.run([run_as, "version"], capture_output=True, text=True, timeout=20).stdout.strip()
-            vaults = [v for v in subprocess.run([run_as, "vaults"], capture_output=True, text=True, timeout=20).stdout.splitlines() if v.strip()]
+            utf8 = {"capture_output": True, "text": True, "encoding": "utf-8", "errors": "replace", "timeout": 20}
+            ver = subprocess.run([run_as, "version"], **utf8).stdout.strip()
+            vaults = [v for v in subprocess.run([run_as, "vaults"], **utf8).stdout.splitlines() if v.strip()]
         except Exception as e:  # noqa: BLE001
             ver = f"error: {e}"
     print(json.dumps({"cli_on_path": exe, "cli_shim": shim, "cli_version": ver, "vaults": vaults, "app_found": installed,
@@ -635,10 +780,12 @@ def probe():
 # ---------- main ----------
 
 def main():
+    # UTF-8 out, always: a cp1252 console turned em dashes in titles into mojibake (2026-10-13), and a
+    # non-ASCII file name used to crash the report when stdout was a pipe.
     for s in (sys.stdout, sys.stderr):
         if hasattr(s, "reconfigure"):
             try:
-                s.reconfigure(errors="backslashreplace")
+                s.reconfigure(encoding="utf-8", errors="replace")
             except Exception:  # noqa: BLE001
                 pass
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -647,7 +794,15 @@ def main():
     ap.add_argument("--max", type=int, default=None,
                     help="items shown per list: 15 by default in the text report; --json lists everything unless --max is given")
     ap.add_argument("--exclude", nargs="*", default=[], metavar="NAME", help="folder names to skip, matched at any depth")
+    ap.add_argument("--include-appdata", action="store_true",
+                    help="also walk AppData, Application Data and Local Settings (skipped by default; ask the user first)")
     ap.add_argument("--fix-index", action="store_true", help="write INDEX.md where a folder has no index and link it from the index above")
+    ap.add_argument("--root-index", action="store_true",
+                    help="write only <root>/INDEX.md (never over an existing one): each top folder's index linked by title, folders without one listed with counts")
+    ap.add_argument("--group", nargs="*", default=[], metavar="PATH",
+                    help="with --root-index: list the children of these folders (e.g. Claude/Projects Documents) under their own heading")
+    ap.add_argument("--yes", action="store_true",
+                    help="let --fix-index and --to-markdown-links write on a user profile or a tree of more than 1,000 markdown files")
     ap.add_argument("--to-markdown-links", action="store_true", help="rewrite wikilinks that resolve to one file as relative markdown links")
     ap.add_argument("--vault-init", action="store_true", help="write .obsidian/app.json (markdown links, relative paths, build folders ignored) and .gitignore lines")
     ap.add_argument("--ignore", nargs="*", default=[], metavar="FOLDER", help="extra folders for Obsidian to ignore (with --vault-init)")
@@ -663,16 +818,40 @@ def main():
     if a.vault_init:
         vault_init(a.root, a.ignore)
         return
-    f = scan(a.root, a.exclude)
-    messages, written, rewritten = [], [], []
-    if a.to_markdown_links:
-        rewritten = to_markdown_links(f)
-        messages.append(f"rewrote wikilinks in {len(rewritten)} file(s); embeds, ambiguous and unresolved names left as they were")
-        f = scan(a.root, a.exclude)
-    if a.fix_index:
-        written = fix_index(f)
-        messages.append("wrote " + (", ".join(written) if written else "nothing (every folder has an index)"))
-        f = scan(a.root, a.exclude)
+    def rescan():
+        return scan(a.root, a.exclude, a.include_appdata)
+
+    f = rescan()
+    messages, written, rewritten, refused = [], [], [], None
+    reason = home_reason(f["_root"], f["files"]) if (a.fix_index or a.to_markdown_links) and not a.yes else None
+    if reason:
+        would = []
+        if a.fix_index:
+            n = len(f["folders_without_index"])
+            would.append(f"--fix-index would write {n} INDEX.md file(s) and add a line to the index above each")
+        if a.to_markdown_links:
+            would.append(f"--to-markdown-links would rewrite {len(to_markdown_links(f, dry=True))} file(s)")
+        refused = (f"refused: {reason}; " + "; ".join(would) +
+                   ". Nothing was written. Ask the user to pick a subfolder, use --root-index for one root INDEX.md, or rerun with --yes.")
+        messages.append(refused)
+    else:
+        if a.to_markdown_links:
+            rewritten = to_markdown_links(f)
+            messages.append(f"rewrote wikilinks in {len(rewritten)} file(s); embeds, ambiguous and unresolved names left as they were")
+            f = rescan()
+    if a.root_index:
+        out_path = root_index(f, a.group)
+        if out_path is None:
+            messages.append("root INDEX.md exists; not overwritten (edit it by hand)")
+        else:
+            written.append(rel(out_path, f["_root"]))
+            messages.append(f"wrote {rel(out_path, f['_root'])} (root only)")
+            f = rescan()
+    if a.fix_index and not refused:
+        fixed = fix_index(f)
+        written += fixed
+        messages.append("wrote " + (", ".join(fixed) if fixed else "nothing (every folder has an index)"))
+        f = rescan()
     if a.json:
         for m in messages:
             print(m, file=sys.stderr)
@@ -681,14 +860,14 @@ def main():
             # Counts stay whole; long lists are cut so a big tree's report fits in an agent's context.
             out["truncated"] = {k: len(v) for k, v in out.items() if isinstance(v, list) and len(v) > a.max}
             out.update({k: v[:a.max] for k, v in out.items() if isinstance(v, list)})
-        out["written"], out["rewritten"] = written, rewritten
+        out["written"], out["rewritten"], out["refused"] = written, rewritten, refused
         print(json.dumps(out, indent=2))
         errs = error_count(f)
     else:
         for m in messages:
             print(m)
         errs = report(f, 15 if a.max is None else a.max)
-    sys.exit(1 if errs else 0)
+    sys.exit(3 if refused else 1 if errs else 0)
 
 
 if __name__ == "__main__":

@@ -17,14 +17,37 @@ FIXTURE = HERE.parent / "evals" / "fixtures" / "vault"
 FAILS = []
 
 
-def run(*args, cwd=None):
-    p = subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True, text=True, cwd=cwd)
+def run(*args, cwd=None, env=None):
+    p = subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True, text=True,
+                       encoding="utf-8", errors="strict", cwd=cwd, env=env)
     return p.returncode, p.stdout + p.stderr
 
 
 def scan_json(root, *extra):
-    p = subprocess.run([sys.executable, str(SCRIPT), str(root), "--json", *map(str, extra)], capture_output=True, text=True)
+    p = subprocess.run([sys.executable, str(SCRIPT), str(root), "--json", *map(str, extra)], capture_output=True, text=True,
+                       encoding="utf-8")
     return p.returncode, json.loads(p.stdout)
+
+
+def deny_read(p):
+    """Make a file unreadable for this user. Returns an undo function, or None where that cannot be done
+    (root on POSIX, a Windows account the deny entry does not bind)."""
+    if os.name == "nt":
+        who = subprocess.run(["whoami"], capture_output=True, text=True).stdout.strip()
+        if not who:
+            return None
+        subprocess.run(["icacls", str(p), "/deny", f"{who}:(R)"], capture_output=True)
+        undo = lambda: subprocess.run(["icacls", str(p), "/remove:d", who], capture_output=True)  # noqa: E731
+    else:
+        os.chmod(p, 0)
+        undo = lambda: os.chmod(p, 0o644)  # noqa: E731
+    try:
+        with open(p, "rb") as fh:
+            fh.read(1)
+    except PermissionError:
+        return undo
+    undo()
+    return None
 
 
 def check(name, cond, detail=""):
@@ -280,6 +303,118 @@ def main():
         write(mv / "sibling.md", "# Sibling\n")
         code, d = scan_json(mv)
         check("moved note: its stale relative link is reported broken", code == 1 and [x["target"] for x in d["broken_md_links"]] == ["sibling.md"], d["broken_md_links"])
+
+        # 13. Gaps found by the Claude Desktop marketplace test of 2026-10-13 (C-20261013-1).
+        # 13a. One unreadable file is skipped and listed, not a traceback.
+        ur = tmp / "unreadable"
+        write(ur / "README.md", "# Root\n\n[locked](locked.md) [fine](fine.md)\n")
+        write(ur / "locked.md", "# Locked\n")
+        write(ur / "fine.md", "# Fine\n")
+        undo = deny_read(ur / "locked.md")
+        if undo is None:
+            print("skip unreadable file (this platform or account cannot deny itself read access)")
+        else:
+            try:
+                code, out = run(ur)
+                check("unreadable file: no traceback, exit 0", code == 0 and "Traceback" not in out, out[-400:])
+                check("unreadable file: counted and listed in the text report", "unreadable files 1" in out and "locked.md" in out, out[-400:])
+                code, d = scan_json(ur)
+                check("unreadable file: listed in --json, the rest still linted",
+                      [x["file"] for x in d["unreadable_files"]] == ["locked.md"] and d["files"] == 3 and d["broken_md_links"] == [], d)
+                code, d = scan_json(ur, "--max", "0")
+                check("unreadable file: --max 0 cuts the list and keeps the count", d["unreadable_files"] == [] and d["truncated"].get("unreadable_files") == 1, d)
+            finally:
+                undo()
+        # 13b. AppData, Application Data and Local Settings are skipped at any depth unless --include-appdata.
+        ad = tmp / "appdata"
+        write(ad / "README.md", "# Root\n")
+        write(ad / "AppData" / "Local" / "tool" / "README.md", "# Tool\n\n[x](missing.md)\n")
+        write(ad / "user" / "Application Data" / "a.md", "# A\n")
+        write(ad / "user" / "Local Settings" / "b.md", "# B\n")
+        code, d = scan_json(ad)
+        check("AppData folders skipped by default", d["files"] == 1 and d["broken_md_links"] == [], (d["files"], d["broken_md_links"]))
+        code, d = scan_json(ad, "--include-appdata")
+        check("--include-appdata walks them", d["files"] == 4 and len(d["broken_md_links"]) == 1, (d["files"], d["broken_md_links"]))
+        code, out = run("--help")
+        check("--help documents the AppData skip and the opt-in flag", "AppData" in out and "--include-appdata" in out, out[:300])
+        if os.name == "nt":
+            hs = ad / "My Documents"
+            write(hs / "x.md", "# X\n\n[x](missing.md)\n")
+            subprocess.run(["attrib", "+h", "+s", str(hs)], capture_output=True)
+            code, d = scan_json(ad)
+            check("Windows hidden + system folder (legacy profile junction) skipped, not reported", d["files"] == 1 and d["unreadable_files"] == [], d)
+            subprocess.run(["attrib", "-h", "-s", str(hs)], capture_output=True)
+        # 13c. On a user profile (NTUSER.DAT) or a tree over 1,000 markdown files the fix flags refuse without --yes.
+        hp = tmp / "profile"
+        write(hp / "README.md", "# Root\n\nSee [[gamma]].\n")
+        write(hp / "notes" / "gamma.md", "# Gamma\n")
+        write(hp / "notes" / "delta.md", "# Delta\n")
+        (hp / "NTUSER.DAT").write_bytes(b"\0")
+        code, out = run(hp, "--fix-index", "--to-markdown-links")
+        check("profile: fix flags refused with exit 3", code == 3 and "refused" in out, out[-400:])
+        check("profile: refusal says how many files it would touch",
+              "would write 1 INDEX.md" in out and "would rewrite 1 file" in out, out[-400:])
+        check("profile: nothing written", not (hp / "notes" / "INDEX.md").exists() and "[[gamma]]" in (hp / "README.md").read_text(encoding="utf-8"))
+        check("profile: the lint still reports", "vault-lint" in out and "errors" in out, out[-400:])
+        code, d = scan_json(hp, "--fix-index")
+        check("profile: --json records the refusal", code == 3 and "refused" in (d.get("refused") or "") and d["written"] == [], d.get("refused"))
+        code, out = run(hp, "--fix-index", "--yes")
+        check("profile: --yes lets --fix-index write", code != 3 and (hp / "notes" / "INDEX.md").exists(), out[-400:])
+        big = tmp / "big"
+        write(big / "README.md", "# Root\n")
+        for i in range(1001):
+            write(big / "notes" / f"n{i:04}.md", "# N\n")
+        code, out = run(big, "--fix-index")
+        check("big tree (1,002 markdown files): --fix-index refused", code == 3 and "1002 markdown files" in out and not (big / "notes" / "INDEX.md").exists(), out[-400:])
+        # 13d. --root-index writes only the root INDEX.md, links each folder's index by title, lists the rest.
+        ri = tmp / "rootidx"
+        write(ri / "Projects" / "Ai" / "README.md", "# Ai tools\n\nAI tooling and plugins.\n\n[x](x.md)\n")
+        write(ri / "Projects" / "Ai" / "x.md", "# X\n")
+        write(ri / "Projects" / "Kids" / "a.md", "# A\n")
+        write(ri / "Projects" / "Kids" / "deep" / "b.md", "# B\n")
+        write(ri / "Documents" / "Vault Two" / "README.md", "# Vault two — notes\n")
+        write(ri / "Documents" / "Notes" / "n.md", "# N\n")
+        write(ri / "Music" / "README.md", "# Music\n")
+        write(ri / "Documents" / "Everlast" / "vault" / "README.md", "# Everlast vault\n")
+        write(ri / "README.md", "# Root readme\n")
+        write(ri / "loose.md", "# Loose note\n")
+        write(ri / "Lone" / "c.md", "# C\n")
+        (ri / "Empty").mkdir()
+        (ri / "Empty" / "pic.png").write_bytes(b"\x89PNG\r\n")
+        code, out = run(ri, "--root-index", "--group", "Projects", "Documents")
+        idx = (ri / "INDEX.md").read_text(encoding="utf-8")
+        check("root-index: frontmatter with title, date and the index tags",
+              idx.startswith("---\ntitle: rootidx index\ndate: ") and "tags: [index, moc]\n---\n" in idx, idx[:200])
+        check("root-index: group child linked by H1 title with its purpose clause and count",
+              "- [Ai tools](Projects/Ai/README.md): AI tooling and plugins. (2 files)" in idx, idx)
+        check("root-index: paths URL-encoded, non-ASCII title kept", "- [Vault two — notes](Documents/Vault%20Two/README.md) (1 file)" in idx, idx)
+        check("root-index: folders without an index listed unlinked with counts",
+              "`Projects/Kids` (2)" in idx and "`Documents/Notes` (1)" in idx and "`Lone` (1)" in idx, idx)
+        check("root-index: top folder outside the groups linked", "- [Music](Music/README.md) (1 file)" in idx, idx)
+        check("root-index: a pass-through folder links the index of its only subfolder",
+              "- [Everlast vault](Documents/Everlast/vault/README.md) (1 file)" in idx, idx)
+        check("root-index: loose root files linked, the root's own index not", "- [Loose note](loose.md)" in idx and "(README.md)" not in idx, idx)
+        check("root-index: folder with no markdown left out, no subfolder index written",
+              "Empty" not in idx and not (ri / "Projects" / "Kids" / "INDEX.md").exists(), idx)
+        code, d = scan_json(ri)
+        check("root-index: its links resolve", d["broken_md_links"] == [], d["broken_md_links"])
+        (ri / "INDEX.md").write_text("# Hand made\n", encoding="utf-8")
+        code, out = run(ri, "--root-index")
+        check("root-index never overwrites an existing root INDEX.md",
+              (ri / "INDEX.md").read_text(encoding="utf-8") == "# Hand made\n" and "not overwritten" in out, out[-300:])
+        nog = tmp / "rootidx-nogroup"
+        shutil.copytree(ri, nog)
+        (nog / "INDEX.md").unlink()
+        run(nog, "--root-index")
+        idx = (nog / "INDEX.md").read_text(encoding="utf-8")
+        check("root-index without --group: top folders only", "`Projects` (4)" in idx and "Ai tools" not in idx, idx)
+        # 13e. Text output is UTF-8 whatever the console code page (titles and names with an em dash).
+        em = tmp / "emdash"
+        write(em / "README.md", "# Root\n")
+        write(em / "café — notes.md", "# Café\n")
+        env = dict(os.environ, PYTHONIOENCODING="cp1252")
+        code, out = run(em, env=env)
+        check("report prints an em dash file name as UTF-8 even under a cp1252 code page", "café — notes.md" in out, out[-300:])
 
         # 10. The repo's own docs pass the lint (fixtures excluded).
         repo = HERE.parent.parent.parent
