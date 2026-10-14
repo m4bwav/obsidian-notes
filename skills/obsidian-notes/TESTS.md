@@ -8,6 +8,11 @@ Entry shape: `### T-YYYYMMDD-n · date · harness · env · passed/total`, then 
 
 ## Runs
 
+### T-20261013-1 · 2026-10-13 · evergreen-tester (fresh context, one run, skill read from the working copy of C-20261013-1) · DESKTOP native Windows · 1/1
+- action-1 · action · pass: `vault_lint.py <vault>` (exit 1, before: errors 2, orphans 3, folders without index 2), `--fix-index` (wrote both indexes and two README lines), re-lint after hand edits to the purpose clauses (orphans 0, folders without index 0). `check_vault.py --task index` exits 0. The reply gave before and after counts and left nope.md, the ambiguous `[[Beta]]` and the duplicate basename for the user. 12 tool calls, no errors. The new Step 1 text did not misfire on an ordinary folder.
+- Script suites the same day: `test_vault_lint.py` (cases 13a to 13e added) and `tests/test_repo.py` pass on Python 3.9 and 3.14 (Windows); the default lint of the owner's profile completes without a traceback.
+- led to: none (C-20261013-1 kept)
+
 ### T-20261006-1 · 2026-10-06 · evergreen-tester (fresh context, one run, skill read from the working copy of C-20261006-1) · DESKTOP native Windows · 1/1
 - action-1 · action · pass: the text report ran three times (before, `--fix-index`, after hand edits); no `--json`. The script's purpose clauses were in place and the runner rewrote them as "when to read it" lines, as Step 2 now asks. `check_vault.py --task index` exits 0. The reply gave before and after counts and left nope.md, the ambiguous `[[Beta]]` and the duplicate basename for the user. 12 tool calls.
 - Script suites the same day: `test_vault_lint.py` (cases 12a to 12d added) and the new `tests/test_repo.py` pass.
