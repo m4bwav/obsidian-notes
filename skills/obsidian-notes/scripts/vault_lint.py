@@ -339,10 +339,18 @@ def walk(root, excludes, include_appdata=False, unreadable=None):
     return md, every
 
 
+def resolved_path(p):
+    """Path.resolve() that survives a file it may not open: Python 3.9 on Windows raises PermissionError there."""
+    try:
+        return Path(p).resolve()
+    except OSError:
+        return Path(os.path.abspath(p))
+
+
 def rel(p, root):
     """Path relative to the root as walked (so a junction inside the root stays a vault-relative path)."""
     p = Path(p)
-    for cand in (p, p.resolve()):
+    for cand in (p, resolved_path(p)):
         try:
             return posix(cand.relative_to(root))
         except ValueError:
@@ -383,7 +391,7 @@ def scan(root, excludes, include_appdata=False):
     def res(p):
         key = str(p)
         if key not in resolved:
-            resolved[key] = Path(p).resolve()
+            resolved[key] = resolved_path(p)
         return resolved[key]
 
     inbound = {res(p): [0, p] for p in files}
@@ -468,7 +476,7 @@ def scan(root, excludes, include_appdata=False):
         if len(ps) > 1 and stem + ".md" not in INDEX_NAMES:
             f["duplicate_basenames"].append({"basename": ps[0].name, "files": [rel(x, root) for x in ps]})
     for key, (n, p) in inbound.items():
-        if n == 0 and not (p.name.lower() in INDEX_NAMES and p.parent.resolve() == root):
+        if n == 0 and not (p.name.lower() in INDEX_NAMES and resolved_path(p.parent) == root):
             f["orphans"].append(rel(p, root))
     folders = {}
     for p in files:
@@ -703,7 +711,7 @@ def home_reason(root, n_files):
     for var in ("USERPROFILE", "HOME"):
         v = os.environ.get(var)
         try:
-            if v and Path(v).resolve() == root:
+            if v and resolved_path(v) == root:
                 return f"the root is the home folder (${var})"
         except OSError:
             pass
