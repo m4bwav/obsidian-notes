@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261023-1 · 2026-10-23 · setup.md: 1.14.5 and 1.15 notes, Windows PATH detail, Update Relative Links plugin, star count
+- because: R-20261023-1, R-20261023-2
+- files: references/setup.md (Settings, "Automatically update internal links"; Opening a code repo as a vault; The official Obsidian CLI; Agent integrations table)
+- Delta edits only; SKILL.md unchanged, so no test run was needed.
+
 ### C-20261013-1 · 2026-10-13 · Safe on a user profile: unreadable files skipped, AppData skipped, bulk fixes guarded, `--root-index`, UTF-8 output, remote-session steps; version 0.4.0
 - because: the Claude Desktop marketplace test of 2026-10-13 (the listed plugin run from a cloud chat linked to the owner's PC, asked for an index of the whole profile); L-005 to L-010
 - files and what changed, one line per gap:

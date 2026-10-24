@@ -14,8 +14,8 @@
   "topic": "Obsidian-compatible markdown for AI agents: link forms that work in Obsidian, GitHub and VS Code, index and map-of-content practice, the Obsidian CLI and agent integrations, vault layout",
   "tier": "fast",
   "interval_days": 14.0,
-  "last_checked": "2026-10-06",
-  "next_due": "2026-10-20",
+  "last_checked": "2026-10-23",
+  "next_due": "2026-11-06",
   "verify_at_use": false,
   "volatile_claims": [],
   "contradiction": null,
@@ -44,12 +44,18 @@
       "m": 0.4,
       "interval_after": 14.0,
       "note": "user-requested pass with a forum sweep: Obsidian 1.14 public, relative links inside a moved note break (forum 4386), CLI unresolved/orphans/deadends, claude plugin eval; SKILL Step 2 and setup.md edited (C-20261006-1); cost: searches 11 · fetches 18 · tool calls 38"
+    },
+    {
+      "date": "2026-10-23",
+      "m": 0.2,
+      "interval_after": 14.0,
+      "note": "quiet: 1.14.5 security patch, 1.15 EA CLI append/prepend under heading, Windows PATH answered, Update Relative Links plugin pointed, obsidian-skills 50k; setup.md only (C-20261023-1); cost: searches 5 · fetches 9 · tool calls 16"
     }
   ],
   "counts": {
     "learnings": 10,
     "changes": 10,
-    "research": 9,
+    "research": 10,
     "tests": 4
   },
   "consolidate_every": 25,
