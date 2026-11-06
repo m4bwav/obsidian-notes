@@ -63,6 +63,11 @@ Testing (what proves the job was done):
 
 Newest first. Shape: `### R-YYYYMMDD-n · date · one line`, then `source:`, `track:`, `magnitude:` (major 0.6+ / real 0.3-0.5 / cosmetic under 0.3), `applied:`.
 
+### R-20261106-1 · 2026-11-06 · Obsidian 1.15 public; heading= documented
+- Summary: 1.15 public 2026-11-02; 1.15.1 (11-03) is Catalyst only: eval top-level await, per-device URI callbacks. `append` and `prepend` take `heading=<name>`, which answers that open question. No link-rule change in the summaries; full 1.15 notes unread. kepano/obsidian-skills quiet, 50.9k stars. Practice, testing: nothing new; forum latest.json and MCP registry not fetched.
+- Track: subject. Sources: https://obsidian.md/changelog/, https://obsidian.md/help/cli
+- magnitude 0.2 · applied: C-20261106-1
+
 ### R-20261023-1 · 2026-10-23 · Subject track: 1.14.5 public (Electron security update), 1.15.0 early access adds CLI/URI append or prepend under a heading; CLI facts re-confirmed, Windows PATH answered; GitHub 73062 unchanged
 - source: https://obsidian.md/changelog/, https://obsidian.md/changelog/2026-10-22-desktop-v1.15.0/, https://obsidian.md/help/cli, https://github.com/orgs/community/discussions/73062
 - track: subject

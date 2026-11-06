@@ -4,6 +4,10 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261106-1 · 2026-11-06 · setup.md: append heading= syntax, 1.15 public
+- because: R-20261106-1
+- files: references/setup.md (CLI)
+
 ### C-20261023-1 · 2026-10-23 · setup.md: 1.14.5 and 1.15 notes, Windows PATH detail, Update Relative Links plugin, star count
 - because: R-20261023-1, R-20261023-2
 - files: references/setup.md (Settings, "Automatically update internal links"; Opening a code repo as a vault; The official Obsidian CLI; Agent integrations table)

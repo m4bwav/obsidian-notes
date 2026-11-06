@@ -36,7 +36,7 @@ Needs the 1.12.7 or newer installer (Settings > General shows the installer vers
 obsidian search query=<text> path=<folder> limit=<n>
 obsidian read file=<name>
 obsidian create name=<name> path=<folder> content=<text> [template=<name>] [overwrite]
-obsidian append file=<name> content=<text> [inline]   # also prepend; 1.15 (early access) adds append or prepend under a heading
+obsidian append file=<name> content=<text> [heading=<name>] [inline]   # also prepend; heading= needs 1.15
 obsidian links file=<name> [total]
 obsidian backlinks file=<name> [counts] [format=json|tsv|csv]
 obsidian tags [file=<name>] [counts] [sort=count]
