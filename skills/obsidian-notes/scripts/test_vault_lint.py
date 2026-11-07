@@ -416,6 +416,20 @@ def main():
         code, out = run(em, env=env)
         check("report prints an em dash file name as UTF-8 even under a cp1252 code page", "café — notes.md" in out, out[-300:])
 
+        # 14. Any URI scheme is external, not only a fixed list (zotero:// links in paper notes were reported broken);
+        # a Windows drive path is still a path.
+        z = tmp / "schemes"
+        write(z / "README.md", "# Root\n\n[Paper](paper.md)\n")
+        write(z / "paper.md", "---\nzotero: zotero://select/library/items/ABCD1234\n---\n"
+              "[Zotero'da aç](zotero://select/library/items/ABCD1234) · [PDF](zotero://open-pdf/library/items/EFGH5678)\n\n"
+              "# Paper\n\n[code](vscode://file/x.py) [doi](doi:10.1000/182) [ref][z]\n\n[z]: zotero://select/library/items/ABCD1234\n")
+        code, d = scan_json(z)
+        check("zotero:// and other URI schemes are not broken links", d["broken_md_links"] == [], d["broken_md_links"])
+        write(z / "drive.md", "# Drive\n\n[Paper](paper.md) [d](C:/missing.md)\n")
+        write(z / "README.md", "# Root\n\n[Paper](paper.md) [Drive](drive.md)\n")
+        code, d = scan_json(z)
+        check("a Windows drive path is still checked as a path", [x["target"] for x in d["broken_md_links"]] == ["C:/missing.md"], d["broken_md_links"])
+
         # 10. The repo's own docs pass the lint (fixtures excluded).
         repo = HERE.parent.parent.parent
         code, d = scan_json(repo, "--exclude", "fixtures")

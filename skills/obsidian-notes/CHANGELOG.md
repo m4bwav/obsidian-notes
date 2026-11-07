@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261108-1 · 2026-11-08 · Any URI scheme is an external link, not only a fixed list; version 0.4.1
+- because: user request (paper notes linked to Zotero with `zotero://select/...` and `zotero://open-pdf/...` were reported as broken markdown links, three false positives on two notes)
+- files: scripts/vault_lint.py (`EXTERNAL` prefix tuple replaced by `URI_SCHEME_RE`, checked in `scan()` → `check_md_target`), scripts/test_vault_lint.py (case 14), both plugin.json files (0.4.1)
+- A link target that starts with a URI scheme (RFC 3986: a letter, then letters, digits, `+ . -`, then a colon) is skipped like `https://` was, so `zotero://`, `vscode://`, `doi:` and any other app scheme no longer count as missing files. The scheme must be two characters or more, so a Windows drive path (`C:/x.md`, `C:\x.md`) is still checked as a path. SKILL.md unchanged, so no eval run was needed.
+
 ### C-20261106-1 · 2026-11-06 · setup.md: append heading= syntax, 1.15 public
 - because: R-20261106-1
 - files: references/setup.md (CLI)

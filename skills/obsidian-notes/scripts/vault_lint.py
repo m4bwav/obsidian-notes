@@ -66,7 +66,10 @@ MD_EMBED_RE = re.compile(r"\!\[((?:[^\]\\]|\\.)*)\]\((?:<([^>]*)>|([^)\s]+))(?:\
 SPACE_LINK_RE = re.compile(r"(?<!\!)\[(?:[^\]\\]|\\.)*\]\(([^)<>\s\"']*\s[^)\"']*)\)")
 REF_DEF_RE = re.compile(r"^\s{0,3}\[([^\]]+)\]:\s*(\S+)", re.M)
 WIKI_RE = re.compile(r"(\!?)\[\[([^\]\|#]*?)(#[^\]\|]*)?(\\?\|[^\]]*)?\]\]")
-EXTERNAL = ("http://", "https://", "mailto:", "obsidian://", "file://", "ftp://", "tel:")
+# A target that starts with a URI scheme (RFC 3986: a letter, then letters, digits, + . -) is not a file:
+# zotero://, vscode://, obsidian://, mailto: and any app scheme a vault links to. Two characters at least,
+# so a Windows drive path (C:\ or C:/) is still checked as a path.
+URI_SCHEME_RE = re.compile(r"[A-Za-z][A-Za-z0-9+.-]+:")
 
 
 # ---------- text helpers ----------
@@ -412,7 +415,7 @@ def scan(root, excludes, include_appdata=False):
                 from_index.add(key)
 
     def check_md_target(p, target, raw):
-        if target.startswith(EXTERNAL) or target.startswith("#"):
+        if URI_SCHEME_RE.match(target) or target.startswith("#"):
             return
         f["md_links"] += 1
         t = unquote(target.split("#", 1)[0].split("?", 1)[0])
