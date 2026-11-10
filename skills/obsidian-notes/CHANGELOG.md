@@ -4,6 +4,11 @@ Every change to [SKILL.md](SKILL.md) and its companions, newest first, each with
 
 Entry shape: `### C-YYYYMMDD-n · date · one-line summary`, then `because:` (IDs or "user request"), `files:` (file and section), and a sentence on what changed. Cite section headings, not line numbers.
 
+### C-20261109-1 · 2026-11-09 · Release 1.0.0: stable
+- because: user request
+- files: ../../plugin.json, ../../.claude-plugin/plugin.json
+- First stable release. It includes the 0.4.0 changes, which were never tagged. vault_lint.py flags and SKILL.md steps are now treated as stable; breaking changes will need a 2.0.
+
 ### C-20261106-1 · 2026-11-06 · setup.md: append heading= syntax, 1.15 public
 - because: R-20261106-1
 - files: references/setup.md (CLI)
