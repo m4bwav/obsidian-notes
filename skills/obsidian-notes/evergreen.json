@@ -14,8 +14,8 @@
   "topic": "Obsidian-compatible markdown for AI agents: link forms that work in Obsidian, GitHub and VS Code, index and map-of-content practice, the Obsidian CLI and agent integrations, vault layout",
   "tier": "fast",
   "interval_days": 14.0,
-  "last_checked": "2026-11-06",
-  "next_due": "2026-11-19",
+  "last_checked": "2026-11-20",
+  "next_due": "2026-12-04",
   "verify_at_use": false,
   "volatile_claims": [],
   "contradiction": null,
@@ -56,12 +56,18 @@
       "m": 0.2,
       "interval_after": 14.0,
       "note": "1.15 public, heading= syntax; cost: searches 3 · fetches 5 · tool calls 12"
+    },
+    {
+      "date": "2026-11-20",
+      "m": 0.15,
+      "interval_after": 14.0,
+      "note": "1.15.1 public, link fixes, rules unchanged; cost: searches 0 · fetches 1 · tool calls 3"
     }
   ],
   "counts": {
     "learnings": 10,
     "changes": 10,
-    "research": 11,
+    "research": 12,
     "tests": 4
   },
   "consolidate_every": 25,
