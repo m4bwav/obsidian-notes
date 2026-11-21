@@ -61,6 +61,13 @@ Testing (what proves the job was done):
 
 ## Findings
 
+### R-20261120-1 · 2026-11-20 · Obsidian 1.15.1 desktop public; link rules unchanged
+- Summary: 1.15.1 desktop public 2026-11-12. Fixes rare cases where links and backlinks did not update after a quick rename or delete; opening an unknown-type file from a note link now asks for confirmation; obsidian://new with heading= alone appends to that heading; CLI commands that take a moment now print output when scripted; CLI delete still moves to .trash. Still nothing on relative links inside moved notes or on following vault-to-outside links, so the skill's warnings stand. Tooling, practice, testing: nothing new.
+- Track: subject
+- Sources: https://obsidian.md/changelog/2026-11-12-desktop-v1.15.1/
+- Magnitude: 0.15
+- applied: none (RESEARCH only)
+
 Newest first. Shape: `### R-YYYYMMDD-n · date · one line`, then `source:`, `track:`, `magnitude:` (major 0.6+ / real 0.3-0.5 / cosmetic under 0.3), `applied:`.
 
 ### R-20261106-1 · 2026-11-06 · Obsidian 1.15 public; heading= documented
